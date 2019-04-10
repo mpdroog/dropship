@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/core/error.php";
 const CSV_HEAD = "ca6be752df02d19db9cc0556461beaf3";
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
@@ -32,7 +33,7 @@ foreach ($lines as $line) {
 
     $offerid = $tok[0];
     $ean = $tok[1];
-    $updated = tok[10];
+    $updated = $tok[10];
     $stock = $tok[7];
 
     if (! isset($lookup[ $ean ])) {
@@ -54,7 +55,7 @@ foreach ($lines as $line) {
     }
 
     $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=? where ean=?", [$offerid, $updated, $stock, $ean]);
-    if ($stmt->affectedCount !== 1) {
+    if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }
     $update++;
