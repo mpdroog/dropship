@@ -22,7 +22,9 @@ if (CSV_HEAD !== md5($head)) {
 $nomatch = 0;
 $mismatch = 0;
 $nochange = 0;
+$update = 0;
 echo $head;
+
 foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
@@ -31,6 +33,7 @@ foreach ($lines as $line) {
     $offerid = $tok[0];
     $ean = $tok[1];
     $updated = tok[10];
+    $stock = $tok[7];
 
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
@@ -50,8 +53,20 @@ foreach ($lines as $line) {
         continue;
     }
 
-    $stmt = $db->exec("update prods set bol_id=?, bol_updated=? where ean=?", [$offerid, $updated, $ean]);
+    $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=? where ean=?", [$offerid, $updated, $stock, $ean]);
     if ($stmt->affectedCount !== 1) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }
+    $update++;
 }
+
+print "nomatch=$nomatch\n";
+print "mismatch=$mismatch\n";
+print "Update=$update\n";
+print "Nochange=$nochange\n";
+print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+$db->close();
+
