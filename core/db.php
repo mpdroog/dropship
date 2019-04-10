@@ -159,6 +159,7 @@ class Db {
 	public function close() {
                 // Supress broken pipe error on destroy
                 Error::mute();
+		$this->cache = [];
                 $this->db = null;
                 Error::unmute();
         }
