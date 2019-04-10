@@ -16,13 +16,15 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 $lines = explode(";", file_get_contents(__DIR__ . "/db_prod.sql"));
 foreach ($lines as $line) {
     if (strlen(trim($line)) === 0) continue;
-    echo $line;
+    //echo $line;
     $res = $db->exec($line);
-    var_dump($res->errorInfo());
+    //var_dump($res->errorInfo());
 }
 
 $xml = new XMLReader();
-$xml->open('compress.zlib://'. __DIR__ . "/edc_prods.zip");
+if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
+    user_error("ERR: Failed opening edc_prods.zip");
+}
 
 while($xml->read() && $xml->name != 'product')
 {
