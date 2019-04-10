@@ -27,6 +27,6 @@ $fname = __DIR__ . "/feed_prod.zip";
 $fd = fopen($fname, "w");
 $res = edc_zip("/b2b_feed.php", $fd);
 fclose($fd);
-var_dump($res);
-
-echo spintf("Downloaded to %s\n", $fname);
+if ($res === true) {
+    echo sprintf("Written to %s\n", $fname);
+}
