@@ -131,6 +131,8 @@ class Db {
 	use DbOrm;
 	/** \PDO */
 	private $db;
+	/** []\PDOStatement Re-use existing query's */
+	private $cache = [];
 
 	/**
 	 * Create a new persistant conn to the DB.
@@ -166,7 +168,11 @@ class Db {
 	 */
 	private function query($query, array $args) {
 		try {
-			$stmt = $this->db->prepare($query);
+			$h = md5($query);
+			if (! isset($this->cache[$h])) {
+				$this->cache[$h] = $this->db->prepare($query);
+			}
+			$stmt = $this->cache[$h];
 			$ok = $stmt->execute($args);
 			if (! $ok) {
 				user_error("SQL failed query=$query");
