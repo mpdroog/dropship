@@ -58,5 +58,16 @@ ON "cats" (
   "title"
 );
 
+CREATE TABLE IF NOT EXISTS bol_del (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "bol_id" text,
+  "tm_added" TEXT NOT NULL,
+  "tm_synced" TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_boldel"
+ON "bol_del" (
+  "bol_id"
+);
+
 PRAGMA foreign_keys = true;
 

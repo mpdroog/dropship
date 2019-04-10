@@ -12,6 +12,11 @@ foreach ($db->getAll("select ean, bol_id, bol_updated from prods") as $prod) {
     $lookup[ $prod["ean"] ] = $prod;
 }
 
+$dels = [];
+foreach ($db->getAll("select bol_id from bol_del") as $prod) {
+    $dels[ $prod["bol_id"] ] = true;
+}
+
 $lines = explode("\n", file_get_contents(__DIR__ . "/bol_offers.csv"));
 // offerId,ean,conditionName,conditionCategory,conditionComment,price,fulfilmentDeliveryCode,retailerStock,onHoldByRetailer,fulfilmentType,mutationDateTime
 // 819fe9b3-7e82-4d13-e053-828b620ae101,4024144270354,NEW,NEW,,37.00,24uurs-22,12,false,FBR,2019-03-14 10:41:25.596 UTC
@@ -26,6 +31,7 @@ $nochange = 0;
 $update = 0;
 echo $head;
 
+$now = time();
 foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
@@ -39,6 +45,14 @@ foreach ($lines as $line) {
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
         echo sprintf("WARN: EAN(%s) not found in local sqlite\n", $ean);
+        if (isset($dels[$offerid])) continue; // already set to del in future
+        $db->insert("bol_del", [
+            "bol_id" => $offerid,
+            "tm_added" => $now,
+            "tm_synced" => null
+        ], [
+            "tm_added" => time()
+        ]);
         continue;
     }
 
