@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS prods (
   "time_updated" TEXT NOT NULL,
   "bol_id" integer,
   "bol_updated" text,
-  "prod_id" INTEGER
+  "prod_id" INTEGER,
+  "cats" TEXT NOT NULL
 );
 
 -- ----------------------------
@@ -36,12 +37,20 @@ CREATE TABLE IF NOT EXISTS prods (
 -- ----------------------------
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_ean"
 ON "prods" (
-  "ean" ASC
+  "ean" ASC,
+  "title"
 );
--- CREATE UNIQUE INDEX IF NOT EXISTS "unique_title"
--- ON "prods" (
---   "title" ASC
--- );
+
+CREATE TABLE IF NOT EXISTS cats (
+  "id" INTEGER NOT NULL,
+  "title" TEXT NOT NULL,
+  PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_cat"
+ON "cats" (
+  "title"
+);
 
 PRAGMA foreign_keys = true;
 

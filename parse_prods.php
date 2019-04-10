@@ -13,8 +13,13 @@ function xml($res) {
 }
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$res = $db->exec(file_get_contents(__DIR__ . "/db_prod.sql"));
-var_dump($res->errorInfo());
+$lines = explode(";", file_get_contents(__DIR__ . "/db_prod.sql"));
+foreach ($lines as $line) {
+    if (strlen(trim($line)) === 0) continue;
+    echo $line;
+    $res = $db->exec($line);
+    var_dump($res->errorInfo());
+}
 
 $xml = new XMLReader();
 // __DIR__ . "/feed_prods.zip"
@@ -25,6 +30,7 @@ while($xml->read() && $xml->name != 'product')
 	;
 }
 
+$catDone = [];
 $add = 0;
 $update = 0;
 $ignore = 0;
@@ -42,6 +48,22 @@ while($xml->name == 'product')
 		continue;
 	}
         if (is_array($prod["description"])) $prod["description"] = implode(" ", $prod["description"]);
+
+        $catgroups = $prod["categories"]["category"];
+        if (isset($prod["categories"]["category"]["cat"])) {
+            $catgroups = [$prod["categories"]["category"]];
+        }
+
+        $catids = [];
+	foreach ($catgroups as $catgroup) {
+            foreach ($catgroup["cat"] as $cat) {
+                $catids[] = $cat["id"];
+
+                if (isset($catDone[$cat["id"]])) continue;
+                $db->exec("INSERT OR IGNORE INTO cats (id, title) VALUES(?, ?)", [$cat["id"], $cat["title"]]);
+                $catDone[$cat["id"]] = true;
+            }
+        }
 
 	$variants = $prod["variants"]["variant"];
 	if (isset($variants["id"])) {
@@ -70,7 +92,8 @@ while($xml->name == 'product')
 		"ean" => $variant["ean"],
 		"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
-		"time_updated" => $prod["modifydate"]
+		"time_updated" => $prod["modifydate"],
+                "cats" => implode(",", $catids)
             ]);
 	    $add++;
         } else if ($last_update !== $prod["modifydate"]) {
@@ -81,7 +104,8 @@ while($xml->name == 'product')
                 "ean" => $variant["ean"],
                 "stock" => $variant["stockestimate"],
                 "price" => $prod["price"]["b2c"],
-                "time_updated" => $prod["modifydate"]
+                "time_updated" => $prod["modifydate"],
+                "cats" => implode(",", $catids)
             ], ["id" => $variant["id"]]);
             $update++;
 	} else {
