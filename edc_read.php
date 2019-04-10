@@ -22,8 +22,7 @@ foreach ($lines as $line) {
 }
 
 $xml = new XMLReader();
-// __DIR__ . "/feed_prods.zip"
-$xml->open('compress.zlib://'. "/tmp/edc-YefpGx");
+$xml->open('compress.zlib://'. __DIR__ . "/edc_prods.zip");
 
 while($xml->read() && $xml->name != 'product')
 {

@@ -23,7 +23,7 @@ function edc_zip($url, $fd) {
     return $res;
 }
 
-$fname = __DIR__ . "/feed_prod.zip";
+$fname = __DIR__ . "/edc_prods.zip";
 $fd = fopen($fname, "w");
 $res = edc_zip("/b2b_feed.php", $fd);
 fclose($fd);

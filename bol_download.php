@@ -1,9 +1,13 @@
 <?php
+/*
+ * Download offer export file (CSV) and save to bol_offers.csv
+ */
 require __DIR__ . "/core/init.php";
 const API_URL = "https://api.bol.com/retailer";
 const API_CLIENTID = "8338f293-a8a0-4d6c-b660-7d77d76002cb";
 const API_SECRET = "aMPKgg6tsz_5fvRQbNweO4ejCaSdOI_cVb698D5YwfMy1GeAvm94YGeAD1JRjmI_eGKk0s2bRXc59NECLcrKSw";
 const API_USER = "sync";
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 $arg_exportid = null;
 if (count($_SERVER["argv"]) === 2) {
