@@ -13,7 +13,7 @@ function xml($res) {
 }
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$lines = explode(";", file_get_contents(__DIR__ . "/db_prod.sql"));
+$lines = explode(";", file_get_contents(__DIR__ . "/default.sql"));
 foreach ($lines as $line) {
     if (strlen(trim($line)) === 0) continue;
     //echo $line;

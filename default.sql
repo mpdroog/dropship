@@ -26,10 +26,11 @@ CREATE TABLE IF NOT EXISTS prods (
   "stock" INTEGER NOT NULL,
   "price" real NOT NULL,
   "time_updated" TEXT NOT NULL,
-  "bol_id" integer,
+  "bol_id" text,
   "bol_updated" text,
   "prod_id" INTEGER,
-  "cats" TEXT NOT NULL
+  "cats" TEXT NOT NULL,
+  "bol_stock" INTEGER
 );
 
 -- ----------------------------
@@ -39,6 +40,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "unique_ean"
 ON "prods" (
   "ean" ASC,
   "title"
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol"
+ON "prods" (
+  "bol_id" ASC
 );
 
 CREATE TABLE IF NOT EXISTS cats (
