@@ -2,7 +2,7 @@
 /**
  * Download full product feed (ZIP) and save as JSON.
  */
-require __DIR__ . "/_init.php";
+require __DIR__ . "/core/init.php";
 const EDC_URL = "http://api.edc.nl/%s?key=35t55w94ec2833998860r3e5626eet1c&sort=xml&type=zip&lang=nl&version=2015";
 
 function edc_zip($url, $fd) {
@@ -22,25 +22,11 @@ function edc_zip($url, $fd) {
     curl_close($ch);
     return $res;
 }
-/*function xml($res) {
-    $xml = new SimpleXMLElement($res);
-    return json_encode($xml);
-}*/
 
-$fname = tempnam("/tmp", "edc-");
-$fd = fopen(__DIR__ . "/feed_prod.zip", "w");
-var_dump($fname);
-
+$fname = __DIR__ . "/feed_prod.zip";
+$fd = fopen($fname, "w");
 $res = edc_zip("/b2b_feed.php", $fd);
-var_dump($res);
 fclose($fd);
+var_dump($res);
 
-/*$zip = new ZipArchive;
-$extractPath = __DIR__;
-if($zip->open($fname) != "true"){
- user_error("Error :- Unable to open the Zip File");
-}
-$zip->extractTo($extractPath);
-$zip->close();
-
-file_put_contents(__DIR__ . "/b2b_feed.json", file_get_contents(xml(__DIR__ . "/eg_xml_feed_2015_nl.xml")));*/
+echo spintf("Downloaded to %s\n", $fname);
