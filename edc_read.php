@@ -26,6 +26,13 @@ if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml"))
     user_error("ERR: Failed opening edc_prods.zip");
 }
 
+// Perf++
+{
+    $db->exec("PRAGMA synchronous = OFF;");
+    //$db->exec("PRAGMA journal_mode = MEMORY");
+}
+
+$txn = $db->txn();
 while($xml->read() && $xml->name != 'product')
 {
 	;
@@ -119,6 +126,9 @@ while($xml->name == 'product')
 	$xml->next('product');
 	unset($element);
 }
+$txn->commit();
+$db->close();
+$xml->close();
 
 print "Ignore=$ignore\n";
 print "Add=$add\n";
@@ -129,5 +139,3 @@ print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
 print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
 print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
 print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
-$xml->close();
-$db->close();
