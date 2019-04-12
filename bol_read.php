@@ -17,6 +17,7 @@ foreach ($db->getAll("select bol_id from bol_del") as $prod) {
     $dels[ $prod["bol_id"] ] = true;
 }
 
+// TODO: Abusing memory here..
 $lines = explode("\n", file_get_contents(__DIR__ . "/bol_offers.csv"));
 // offerId,ean,conditionName,conditionCategory,conditionComment,price,fulfilmentDeliveryCode,retailerStock,onHoldByRetailer,fulfilmentType,mutationDateTime
 // 819fe9b3-7e82-4d13-e053-828b620ae101,4024144270354,NEW,NEW,,37.00,24uurs-22,12,false,FBR,2019-03-14 10:41:25.596 UTC
@@ -32,6 +33,7 @@ $update = 0;
 echo $head;
 
 $now = time();
+$txn = $db->txn();
 foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
@@ -74,6 +76,8 @@ foreach ($lines as $line) {
     }
     $update++;
 }
+$txn->commit();
+$db->close();
 
 print "nomatch=$nomatch\n";
 print "mismatch=$mismatch\n";
@@ -83,5 +87,3 @@ print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
 print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
 print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
 print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
-$db->close();
-
