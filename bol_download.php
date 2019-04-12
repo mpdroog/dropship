@@ -40,10 +40,22 @@ function bol_bearer() {
         var_dump($j);
         user_error("http_bearer: account does not have retailer role but role=" . $j["scope"]);
     }
-    return $j["access_token"];
+
+    $exp = $j["expires_in"];
+    return [
+        "expire" => strtotime("+$exp sec"),
+        "bearer" => $j["access_token"]
+    ];
 }
 
-function bol_http($method, $url, $bearer, $d = []) {
+function bol_http($method, $url, $d = []) {
+    global $token;
+    if (! is_array($token) || $token["expire"] < time()) {
+        // Lazy auto-request new token
+        $token = bol_bearer();
+    }
+
+    $bearer = $token["bearer"];
     $session = curl_init(API_URL . $url);
     $headers = ['Accept: application/vnd.retailer.v3+json', sprintf('Authorization: Bearer %s', $bearer)];
     if (count($d) > 0) {
@@ -62,9 +74,15 @@ function bol_http($method, $url, $bearer, $d = []) {
     $results = json_decode($response, true);
     return $results;
 }
-function bol_zip($method, $url, $bearer, $fd) {
-    $ch = curl_init(API_URL . $url);
+function bol_zip($method, $url, $fd) {
+    global $token;
+    if (! is_array($token) || $token["expire"] < time()) {
+        // Lazy auto-request new token
+        $token = bol_bearer();
+    }
 
+    $bearer = $token["bearer"];
+    $ch = curl_init(API_URL . $url);
     $headers = ['Accept: application/vnd.retailer.v3+csv', sprintf('Authorization: Bearer %s', $bearer)];
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
@@ -96,7 +114,7 @@ $url = null;
 if ($arg_exportid !== null) {
     $exportid = $arg_exportid;
 } else {
-    $res = bol_http("POST", "/offers/export", $token, ["format" => "CSV"]);
+    $res = bol_http("POST", "/offers/export", ["format" => "CSV"]);
     var_dump($res);
     if ($res["status"] !== "PENDING") {
         var_dump($res);
@@ -110,7 +128,7 @@ if ($arg_exportid !== null) {
 $url = "/process-status/$exportid";
 $uuid = null;
 while (true) {
-    $res = bol_http("GET", $url, $token, []);
+    $res = bol_http("GET", $url, []);
     var_dump($res);
     if ($res["status"] === "SUCCESS") {
         $uuid = $res["entityId"];
@@ -124,7 +142,7 @@ while (true) {
 
 $fname = __DIR__ . "/bol_offers.csv";
 $fd = fopen($fname, "w");
-$res = bol_zip("GET", "/offers/export/$uuid", $token, $fd);
+$res = bol_zip("GET", "/offers/export/$uuid", $fd);
 var_dump($res);
 fclose($fd);
 if ($res === true) {
