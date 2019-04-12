@@ -83,7 +83,7 @@ function bol_http($method, $url, $d = []) {
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 $now = time();
-// 0.Del  prods in bol_del where tm_synced is null
+// 0.Del prods in bol_del where tm_synced is null
 foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
     list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
     if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
@@ -106,6 +106,37 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 }
 
 // 1.Sync prods not in Bol
+foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+    list($res, $head) = bol_http("POST", "/offers/", [
+        "ean" => $prod["ean"],
+        "condition" => [
+            "name" => "NEW"
+        ],
+        "referenceCode" => $prod["id"],
+        "onHoldByRetailer" => false,
+        "unknownProductTitle" => $prod["title"],
+        "pricing" => [
+            "bundlePrices" => [[
+                "quantity" => "1",
+                "price" => $prod["price"]
+            ]]
+        ],
+        "stock" => [
+            "amount" => $prod["stock"],
+            "managedByRetailer" => true
+        ],
+        "fulfilment" => [
+            "type" => "FBR",
+            "deliveryCode" => "24uurs-20" // EDC=24uurs-23 but this change gives more space?
+        ]
+    ]);
+    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$now, $prod["id"]]);
+    if ($stmt->rowCount() !== 1) {
+        user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+    }
+    echo sprintf("bol_add %s\n", $prod["ean"]);
+}
+
 // 2.Sync prods newer than lastrun.syncdate
 // 3.Save lastrun.syncdate
 
