@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS prods (
   "bol_updated" text,
   "prod_id" INTEGER,
   "cats" TEXT NOT NULL,
-  "bol_stock" INTEGER
+  "bol_stock" INTEGER,
+  "bol_pending" INTEGER
 );
 
 -- ----------------------------
