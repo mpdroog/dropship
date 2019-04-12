@@ -2,7 +2,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
-const CSV_HEAD = "ca6be752df02d19db9cc0556461beaf3";
+const CSV_HEAD = "2da3306a0eb73cdf28087d3b2ef17dd8";
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 // Convert current sqlite-db to hashmap for rapid lookups
@@ -19,10 +19,10 @@ foreach ($db->getAll("select bol_id from bol_del") as $prod) {
 
 // TODO: Abusing memory here..
 $lines = explode("\n", file_get_contents(__DIR__ . "/bol_offers.csv"));
-// offerId,ean,conditionName,conditionCategory,conditionComment,price,fulfilmentDeliveryCode,retailerStock,onHoldByRetailer,fulfilmentType,mutationDateTime
-// 819fe9b3-7e82-4d13-e053-828b620ae101,4024144270354,NEW,NEW,,37.00,24uurs-22,12,false,FBR,2019-03-14 10:41:25.596 UTC
 $head = array_shift($lines);
 if (CSV_HEAD !== md5($head)) {
+    echo "md5.old=" . CSV_HEAD;
+    echo "md5.new=" . md5($head);
     exit("ERR: CSV-header mismatching with dev header, head=$head\n");
 }
 
@@ -31,6 +31,8 @@ $mismatch = 0;
 $nochange = 0;
 $update = 0;
 echo $head;
+
+// offerId,ean,conditionName,conditionCategory,conditionComment,bundlePricesPrice,fulfilmentDeliveryCode,stockAmount,onHoldByRetailer,fulfilmentType,mutationDateTime
 
 $now = time();
 $txn = $db->txn();
