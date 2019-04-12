@@ -12,6 +12,42 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
+$filters = ["lingerie",
+"jurk",
+"jarretel",
+"suit",
+"kous",
+"onderbroek",
+"tuig",
+"body",
+"handboei",
+"panty",
+"body",
+"masker",
+"gag",
+"kleding",
+"sloffen",
+"gordel",
+"batterij",
+"masker",
+"beha",
+"handschoen",
+"haak",
+"pantoffel",
+"dwangbuis",
+"kuis",
+"kooi",
+"ballon",
+"halsband",
+"riem",
+"bra",
+"harnas",
+"slip",
+"bh",
+"strap-on",
+"s/"
+];
+
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 $lines = explode(";", file_get_contents(__DIR__ . "/default.sql"));
 foreach ($lines as $line) {
@@ -44,6 +80,7 @@ $update = 0;
 $ignore = 0;
 $nochange = 0;
 $error = 0;
+$filtern = 0;
 while($xml->name == 'product')
 {
 	$prod = xml($xml->readOuterXML());
@@ -57,6 +94,18 @@ while($xml->name == 'product')
 	}
         if (is_array($prod["description"])) $prod["description"] = implode(" ", $prod["description"]);
 
+        // Filter
+        $title = strtolower($prod["title"]);
+        foreach ($filters as $filter) {
+                if (strpos($title, $filter) !== false) {
+                    echo sprintf("Ignore (filter) %s\n", $prod["title"]);
+                    $filtern++;
+                    $xml->next('product');
+                    unset($element);
+                    continue 2;
+                }
+        }
+
         $catgroups = $prod["categories"]["category"];
         if (isset($prod["categories"]["category"]["cat"])) {
             $catgroups = [$prod["categories"]["category"]];
@@ -66,6 +115,18 @@ while($xml->name == 'product')
 	foreach ($catgroups as $catgroup) {
             foreach ($catgroup["cat"] as $cat) {
                 $catids[] = $cat["id"];
+
+                // Filter
+                $title = strtolower($cat["title"]);
+                foreach ($filters as $filter) {
+                if (strpos($title, $filter) !== false) {
+                    echo sprintf("Ignore (filter) %s\n", $prod["title"]);
+                    $filtern++;
+                    $xml->next('product');
+                    unset($element);
+                    continue 4;
+                }
+                }
 
                 if (isset($catDone[$cat["id"]])) continue;
                 $db->exec("INSERT OR IGNORE INTO cats (id, title) VALUES(?, ?)", [$cat["id"], $cat["title"]]);
@@ -135,6 +196,7 @@ print "Add=$add\n";
 print "Update=$update\n";
 print "Nochange=$nochange\n";
 print "Error=$error\n";
+print "Filter=$filtern\n";
 print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
 print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
 print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
