@@ -33,7 +33,7 @@ function bol_bearer() {
 
     $exp = $j["expires_in"];
     return [
-        "expire" => date("Y-m-d H:i:s", strtotime("+$exp sec")),
+        "expire" => strtotime("+$exp sec"),
         "bearer" => $j["access_token"]
     ];
 }
