@@ -34,6 +34,24 @@ CREATE TABLE IF NOT EXISTS prods (
   "bol_pending" INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS bol_prods (
+   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+   "name" TEXT NOT NULL,
+   "chunkid" TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol_prod"
+ON "bol_prods" (
+  "chunkid"
+);
+
+CREATE TABLE IF NOT EXISTS bol_prod_attrs (
+   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+   "bol_prod_id" INTEGER NOT NULL,
+   "name" TEXT NOT NULL,
+   "label" TEXT NOT NULL,
+   "definition" TEXT
+);
+
 -- ----------------------------
 -- Indexes structure for table prods
 -- ----------------------------
