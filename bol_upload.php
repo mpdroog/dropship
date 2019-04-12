@@ -30,10 +30,22 @@ function bol_bearer() {
         var_dump($j);
         user_error("http_bearer: account does not have retailer role but role=" . $j["scope"]);
     }
-    return $j["access_token"];
+
+    $exp = $j["expires_in"];
+    return [
+        "expire" => date("Y-m-d H:i:s", strtotime("+$exp sec")),
+        "bearer" => $j["access_token"]
+    ];
 }
 
-function bol_http($method, $url, $bearer, $d = []) {
+function bol_http($method, $url, $d = []) {
+    global $token;
+    if (! is_array($token) || $token["expire"] < time()) {
+        // Lazy auto-request new token
+        $token = bol_bearer();
+    }
+
+    $bearer = $token["bearer"];
     $session = curl_init(API_URL . $url);
     $headers = ['Accept: application/vnd.retailer.v3+json', sprintf('Authorization: Bearer %s', $bearer)];
     if (count($d) > 0) {
@@ -69,14 +81,11 @@ function bol_http($method, $url, $bearer, $d = []) {
 }
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$token = bol_bearer();
 
-// TODO: Send everything that changed locally compared to remote?
 $now = time();
-
 // 0.Del  prods in bol_del where tm_synced is null
 foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
-    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], $token, []);
+    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
     if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
         var_dump($res);
         user_error("DELETE offer err.");
