@@ -100,6 +100,9 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
     }
     if ($head["x-ratelimit-remaining"][0] === "1") {
         $retry = intval($head["x-ratelimit-reset"][0]) - time();
+        if ($retry < 10) {
+            $retry = 10;
+        }
         echo sprintf("[ratelimit] sleep %d sec..", $retry);
         sleep($retry);
     }
