@@ -106,21 +106,11 @@ function bol_zip($method, $url, $fd) {
     return $res;
 }
 
-// https://api.bol.com/retailer/public/redoc/v3#operation/post-offer-export
-// Not interesting? https://developers.bol.com/documentatie/ftp/content-ftps-handleiding/
-$token = bol_bearer();
-
-$url = null;
+$res = null;
 if ($arg_exportid !== null) {
     $exportid = $arg_exportid;
 } else {
     $res = bol_http("POST", "/offers/export", ["format" => "CSV"]);
-    var_dump($res);
-    if ($res["status"] !== "PENDING") {
-        var_dump($res);
-        user_error("Failed sending request for export.");
-    }
-
     $exportid = $res["id"];
 }
 
@@ -128,8 +118,10 @@ if ($arg_exportid !== null) {
 $url = "/process-status/$exportid";
 $uuid = null;
 while (true) {
-    $res = bol_http("GET", $url, []);
-    var_dump($res);
+    if ($res === null) {
+        $res = bol_http("GET", $url, []);
+    }
+    echo sprintf("id=%s status=%s\n", $exportid, $res["status"]);
     if ($res["status"] === "SUCCESS") {
         $uuid = $res["entityId"];
         break;
@@ -137,7 +129,10 @@ while (true) {
     if ($res["status"] !== "PENDING") {
         user_error("Unprocessible status=" . $res["status"]);
     }
+
+    echo "sleep 15sec\n";
     sleep(15); // 15sec delay
+    $res = null; // force next get
 }
 
 $fname = __DIR__ . "/bol_offers.csv";

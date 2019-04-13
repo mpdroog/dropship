@@ -8,7 +8,10 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 // Convert current sqlite-db to hashmap for rapid lookups
 // TODO: Something more memory friendly?
 $lookup = [];
-foreach ($db->getAll("select ean, bol_id, bol_updated from prods") as $prod) {
+foreach ($db->getAll("select ean, bol_id, bol_updated, stock from prods") as $prod) {
+    if (isset($lookup[ $prod["ean"] ])) {
+        user_error("assumption fail. double EAN");
+    }
     $lookup[ $prod["ean"] ] = $prod;
 }
 
@@ -72,7 +75,12 @@ foreach ($lines as $line) {
         continue;
     }
 
-    $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=? where ean=?", [$offerid, $updated, $stock, $ean]);
+    $pending = 0;
+    if ($l["stock"] != $stock) {
+        $pending = null; // force sync for new stock amount
+    }
+
+    $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=?, bol_pending=? where ean=?", [$offerid, $updated, $stock, $pending, $ean]);
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }

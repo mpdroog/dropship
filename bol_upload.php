@@ -74,25 +74,18 @@ function bol_http($method, $url, $d = []) {
     curl_setopt($session, CURLOPT_ENCODING, 'UTF-8');
     curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($session, CURLOPT_SSL_VERIFYPEER, false);
+
     $response = curl_exec($session);
+    $code = curl_getinfo($session, CURLINFO_HTTP_CODE);
+    $res_headers["status"] = $code;
     curl_close($session);
     $results = json_decode($response, true);
+    if ($code === "429") {
+        user_error("Error, ratelimit.");
+    }
     return [$results, $res_headers];
 }
-
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-
-$now = time();
-// 0.Del prods in bol_del where tm_synced is null
-foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
-    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
-    if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
-        var_dump($res);
-        user_error("DELETE offer err.");
-    }
-    $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
-    echo sprintf("bol_del %s\n", $prod["bol_id"]);
-
+function ratelimit(array $head) {
     if (! isset($head["x-ratelimit-remaining"])) {
         var_dump($head);
         var_dump($res);
@@ -108,8 +101,24 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
     }
 }
 
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+
+$now = time();
+// 0.Del prods in bol_del where tm_synced is null
+foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
+    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
+    if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
+        var_dump($res);
+        user_error("DELETE offer err.");
+    }
+    $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
+    echo sprintf("bol_del %s\n", $prod["bol_id"]);
+    ratelimit($head);
+}
+
 // 1.Sync prods not in Bol
-foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+/*foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+    var_dump($prod);
     list($res, $head) = bol_http("POST", "/offers/", [
         "ean" => $prod["ean"],
         "condition" => [
@@ -133,13 +142,37 @@ foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_i
             "deliveryCode" => "24uurs-20" // EDC=24uurs-23 but this change gives more space?
         ]
     ]);
+    if ($head["status"] !== 202) {
+        var_dump($res);
+        continue;
+    }
     $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
     echo sprintf("bol_add %s\n", $prod["ean"]);
-}
+    ratelimit($head);
+}*/
 
-// 2.Sync prods newer than lastrun.syncdate
-// 3.Save lastrun.syncdate
+// 2.Sync prods that have changed since last sync
+foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and bol_pending is null") as $prod) {
+    $bol_id = $prod["bol_id"];
+    if (intval($prod["stock"]) >= 1000) {
+        $prod["stock"] = "999"; // limit to 999
+    }
+    list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
+        "amount" => $prod["stock"],
+        "managedByRetailer" => true
+    ]);
+    if ($head["status"] !== 202) {
+        var_dump($res);
+        continue;
+    }
+    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
+    if ($stmt->rowCount() !== 1) {
+        user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+    }
+    echo sprintf("bol_update %s\n", $prod["ean"]);
+    ratelimit($head);
+}
 
