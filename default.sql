@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS bol_prod_attrs (
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_ean"
 ON "prods" (
   "ean" ASC,
-  "title"
+  "id"
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol"
