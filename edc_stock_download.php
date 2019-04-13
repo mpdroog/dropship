@@ -15,18 +15,37 @@ function edc_zip($fd) {
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     curl_setopt($ch, CURLOPT_FILE, $fd);
 
+    $res_headers = [];
+    curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$res_headers) {
+        $len = strlen($header);
+        $header = explode(':', $header, 2);
+        if (count($header) < 2) // ignore invalid headers
+          return $len;
+        $name = strtolower(trim($header[0]));
+        if (!array_key_exists($name, $res_headers))
+          $res_headers[$name] = [trim($header[1])];
+        else
+          $res_headers[$name][] = trim($header[1]);
+        return $len;
+    });
+
     $res = curl_exec($ch);
     if ($res === false) {
         user_error(curl_error($ch));
     }
     curl_close($ch);
-    return $res;
+    return [$res_headers, $res];
 }
 
 $fname = __DIR__ . "/edc_stock.xml";
 $fd = fopen($fname, "w");
-$res = edc_zip($fd);
+list($headers, $res) = edc_zip($fd);
 fclose($fd);
+
+$lm = strtotime($headers["last-modified"][0]);
+if (! touch($fname, $lm, $lm)) {
+    user_error(sprintf("touch($fname)=%s failed", $lm));
+}
 if ($res === true) {
     echo sprintf("Written to %s\n", $fname);
 }
