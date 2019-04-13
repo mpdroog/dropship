@@ -163,7 +163,8 @@ while($xml->name == 'product')
 		"price" => $prod["price"]["b2c"],
 		"time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
-                "bol_pending" => 0
+                "bol_pending" => 0,
+                "edc_artnum" => $variant["subartnr"]
             ]);
 	    $add++;
         } else if ($last_update !== $prod["modifydate"]) {
@@ -176,7 +177,8 @@ while($xml->name == 'product')
                 "price" => $prod["price"]["b2c"],
                 "time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
-                "bol_pending" => 0
+                "bol_pending" => 0,
+                "edc_artnum" => $variant["subartnr"]
             ], ["id" => $variant["id"]]);
             $update++;
 	} else {
