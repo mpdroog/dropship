@@ -133,7 +133,7 @@ foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_i
             "deliveryCode" => "24uurs-20" // EDC=24uurs-23 but this change gives more space?
         ]
     ]);
-    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$now, $prod["id"]]);
+    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
