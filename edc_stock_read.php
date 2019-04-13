@@ -13,6 +13,7 @@ function xml($res) {
 }
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$modified = date("Y-m-d H:i:s", filemtime(__DIR__ . "/edc_stock.xml"));
 $xml = new XMLReader();
 if (! $xml->open(__DIR__ . "/edc_stock.xml")) {
     user_error("ERR: Failed opening edc_stock.xml");
@@ -40,25 +41,15 @@ $filtern = 0;
 while($xml->name == 'product')
 {
 	$prod = xml($xml->readOuterXML());
-/*
-product>
-<productid>6</productid>
-<variantid>35016</variantid>
-<productnr>05096470000</productnr>
-<ean>4024144513543</ean>
-<stock>J</stock>
-<qty>1</qty>
-</product>
-*/
 
-            if (is_array($prod["ean"])) $prod["ean"] = trim(implode(" ", $prod["ean"]));
-            if (strlen($prod["ean"]) === 0) {
-                echo "Product missing EAN, SKIP...\n";
-                $error++;
-                $xml->next('product');
-                unset($element);
-                continue;
-            }
+        if (is_array($prod["ean"])) $prod["ean"] = trim(implode(" ", $prod["ean"]));
+        if (strlen($prod["ean"]) === 0) {
+            echo "Product missing EAN, SKIP...\n";
+            $error++;
+            $xml->next('product');
+            unset($element);
+            continue;
+        }
 
 	$stock = $db->getCell("SELECT stock from prods WHERE id=? and ean=?", [$prod["variantid"], $prod["ean"]]);
 	if ($stock === false) {
@@ -68,7 +59,7 @@ product>
             continue;
         } else if ($stock !== $prod["qty"]) {
             echo sprintf("Update %s => %s\n", $prod["ean"], $prod["qty"]);
-            $db->exec("UPDATE `prods` SET `stock` = ? WHERE `id` = ?AND `ean` = ?", [$prod["qty"], $prod["variantid"], $prod["ean"]]);
+            $db->exec("UPDATE `prods` SET `stock` = ?, time_updated=? WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $modified, $prod["variantid"], $prod["ean"]]);
             $update++;
 	} else {
             echo sprintf("Nochange %s\n", $prod["ean"]);
