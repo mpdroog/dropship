@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS prods (
   "ean" TEXT NOT NULL,
   "stock" INTEGER NOT NULL,
   "price" real NOT NULL,
+  "price_me" real NOT NULL,
   "time_updated" TEXT NOT NULL,
   "edc_artnum" TEXT NOT NULL,
   "bol_id" text,

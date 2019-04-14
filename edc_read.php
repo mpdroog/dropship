@@ -161,6 +161,7 @@ while($xml->name == 'product')
 		"ean" => $variant["ean"],
 		"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
+                "price_me" => $prod["price"]["b2b"],
 		"time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
@@ -170,11 +171,12 @@ while($xml->name == 'product')
         } else if ($last_update !== $prod["modifydate"]) {
             echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
-                "title" => $prod["title"] + " " + $variant["title"],
+                "title" => $prod["title"] . " " . $variant["title"],
                 "description" => $prod["description"],
                 "ean" => $variant["ean"],
                 "stock" => $variant["stockestimate"],
                 "price" => $prod["price"]["b2c"],
+                "price_me" => $prod["price"]["b2b"],
                 "time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
