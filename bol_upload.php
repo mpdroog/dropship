@@ -104,6 +104,7 @@ function ratelimit(array $head) {
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 $now = time();
+$del = 0;
 // 0.Del prods in bol_del where tm_synced is null
 foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
     list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
@@ -113,9 +114,11 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
     }
     $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
     echo sprintf("bol_del %s\n", $prod["bol_id"]);
+    $del++;
     ratelimit($head);
 }
 
+$added = 0;
 // 1.Sync prods not in Bol
 /*foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
     var_dump($prod);
@@ -151,10 +154,12 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
     echo sprintf("bol_add %s\n", $prod["ean"]);
+    $added++;
     ratelimit($head);
 }*/
 
 // 2.Sync prods that have changed since last sync
+$update = 0;
 foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and bol_pending is null") as $prod) {
     $bol_id = $prod["bol_id"];
     if (intval($prod["stock"]) >= 1000) {
@@ -173,6 +178,11 @@ foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods whe
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
     echo sprintf("bol_update %s\n", $prod["ean"]);
+    $update++;
     ratelimit($head);
 }
+
+echo "del=$del\n";
+echo "added=$added\n";
+echo "update=$update\n";
 
