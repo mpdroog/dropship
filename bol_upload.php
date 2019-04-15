@@ -87,9 +87,7 @@ function bol_http($method, $url, $d = []) {
 }
 function ratelimit(array $head) {
     if (! isset($head["x-ratelimit-remaining"])) {
-        var_dump($head);
-        var_dump($res);
-        user_error("Unexpected response.");
+        return;
     }
     if ($head["x-ratelimit-remaining"][0] === "1") {
         $retry = intval($head["x-ratelimit-reset"][0]) - time();
@@ -120,8 +118,17 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 
 $added = 0;
 // 1.Sync prods not in Bol
-/*foreach ($db->getAll("select id, ean, title, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
-    var_dump($prod);
+foreach ($db->getAll("select id, ean, title, price_me, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+    // One qty price
+    $price = $prod["price_me"];        // my price
+    $price = bcmul($price, "1.21", 5); // add VAT
+    $price = bcadd($price, "6.5", 5);  // Add transaction costs
+    $price = bcmul($price, "1.3", 5);  // Add 30% profit for me
+
+    $price = bcmul($price, "1.15", 5); // bol 15% costs
+    $price = bcadd($price, "1", 5);    // bol standard costs
+    $price = round($price, 2);
+
     list($res, $head) = bol_http("POST", "/offers/", [
         "ean" => $prod["ean"],
         "condition" => [
@@ -133,7 +140,7 @@ $added = 0;
         "pricing" => [
             "bundlePrices" => [[
                 "quantity" => "1",
-                "price" => $prod["price"]
+                "price" => $price
             ]]
         ],
         "stock" => [
@@ -147,6 +154,7 @@ $added = 0;
     ]);
     if ($head["status"] !== 202) {
         var_dump($res);
+        ratelimit($head);
         continue;
     }
     $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
@@ -156,7 +164,7 @@ $added = 0;
     echo sprintf("bol_add %s\n", $prod["ean"]);
     $added++;
     ratelimit($head);
-}*/
+}
 
 // 2.Sync prods that have changed since last sync
 $update = 0;

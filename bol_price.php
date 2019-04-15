@@ -1,6 +1,6 @@
 <?php
 /*
- * Read SQLite and find everything we need to send.
+ * Sync ALL products with profitable prices.
  */
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
@@ -87,9 +87,7 @@ function bol_http($method, $url, $d = []) {
 }
 function ratelimit(array $head) {
     if (! isset($head["x-ratelimit-remaining"])) {
-        var_dump($head);
-        var_dump($res);
-        user_error("Unexpected response.");
+        return;
     }
     if ($head["x-ratelimit-remaining"][0] === "1") {
         $retry = intval($head["x-ratelimit-reset"][0]) - time();
@@ -121,30 +119,66 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 // 2.Sync prods that have changed since last sync
 $update = 0;
 foreach ($db->getAll("select bol_id, id, ean, title, price, price_me, stock from prods where bol_id is not null") as $prod) {
+    echo sprintf("\nean=%s price=%s price_me=%s", $prod["ean"], $prod["price"], $prod["price_me"]);
     $bol_id = $prod["bol_id"];
     // Calculate own price, don't blindly use the advice price as it can cost us money...
+    // One qty price
     $price = $prod["price_me"];        // my price
     $price = bcmul($price, "1.21", 5); // add VAT
     $price = bcadd($price, "6.5", 5);  // Add transaction costs
+    $price = bcmul($price, "1.3", 5);  // Add 30% profit for me
 
-    $price = bcmul($price, "1.15", 5);    // bol 15% costs
+    $price = bcmul($price, "1.15", 5); // bol 15% costs
     $price = bcadd($price, "1", 5);    // bol standard costs
     $price = round($price, 2);
 
+    /*$margin = "1"; // 1 a.k.a. do nothing
     if ($price < $prod["price"]) {
-        // Advice price is higher, we don't mind ;)
+        // Calculate percentage for quantity correcting
+        // 100-(4,90/4,95*100)
+        $margin = bcsub("100", bcmul( bcdiv($price, $prod["price"], 5), "100" , 5) , 5);
+        echo sprintf(" advice higher=%s %%", $margin);
+        // 1+(1%/100)
+        $margin = round(bcadd("1", bcdiv($margin, "100", 5), 5), 2);
+
         $price = $prod["price"];
-    }
-    echo sprintf("price me=%s calc=%s advice=%s\n", $prod["price_me"], $price, $prod["price"]);
+    }*/
+    echo sprintf("1x price.sell=%s\n", $price);
+
+    $bundle = [[
+        "quantity" => 1,
+        "price" => $price
+    ]];
+    /*if ($prod["price_me"] < "20.00") {
+        // Sales strategy. Lower price as transaction costs lower
+        // 2 to 4
+        for ($qty = 2; $qty < 5; $qty++) {
+            $postal = bcdiv("6.5", $qty, 5);    // divide transaction costs over quantity
+
+            $price = $prod["price_me"];         // my price
+            $price = bcmul($price, "1.21", 5);  // add VAT
+            $price = bcadd($price, $postal, 5); // Add transaction costs
+            $price = bcmul($price, "1.3", 5);   // Add 30% profit for me
+            $price = bcmul($price, $margin, 5); // TODO: Adviced margin by supplier
+
+            $price = bcmul($price, "1.15", 5);  // bol 15% costs
+            $price = bcadd($price, "1", 5);     // bol standard costs
+            $price = round($price, 2);
+
+            $bundle[] = [
+                "quantity" => $qty,
+                "price" => $price
+            ];
+            echo sprintf("%sx price.sell=%s\n", $qty, $price);
+        }
+    }*/
 
     list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
-        "pricing" => ["bundlePrices" => [[
-            "quantity" => "1",
-            "price" => $price
-        ]]
-    ]]);
+        "pricing" => ["bundlePrices" => $bundle]
+    ]);
     if ($head["status"] !== 202) {
         var_dump($res);
+        ratelimit($head);
         continue;
     }
     $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
