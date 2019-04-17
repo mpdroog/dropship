@@ -118,17 +118,8 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 
 $added = 0;
 // 1.Sync prods not in Bol
-foreach ($db->getAll("select id, ean, title, price_me, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
-    // One qty price
-    $price = $prod["price_me"];        // my price
-    $price = bcmul($price, "1.21", 5); // add VAT
-    $price = bcadd($price, "6.5", 5);  // Add transaction costs
-    $price = bcmul($price, "1.3", 5);  // Add 30% profit for me
-
-    $price = bcmul($price, "1.15", 5); // bol 15% costs
-    $price = bcadd($price, "1", 5);    // bol standard costs
-    $price = round($price, 2);
-
+/*foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+    $price = $prod["calc_price_bol"];
     list($res, $head) = bol_http("POST", "/offers/", [
         "ean" => $prod["ean"],
         "condition" => [
@@ -164,7 +155,7 @@ foreach ($db->getAll("select id, ean, title, price_me, price, stock from prods w
     echo sprintf("bol_add %s\n", $prod["ean"]);
     $added++;
     ratelimit($head);
-}
+}*/
 
 // 2.Sync prods that have changed since last sync
 $update = 0;

@@ -118,19 +118,11 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 
 // 2.Sync prods that have changed since last sync
 $update = 0;
-foreach ($db->getAll("select bol_id, id, ean, title, price, price_me, stock from prods where bol_id is not null") as $prod) {
+foreach ($db->getAll("select bol_id, id, ean, title, bol_price, calc_price_bol, price, price_me, stock from prods where bol_id is not null and bol_price != calc_price_bol") as $prod) {
     echo sprintf("\nean=%s price=%s price_me=%s", $prod["ean"], $prod["price"], $prod["price_me"]);
     $bol_id = $prod["bol_id"];
-    // Calculate own price, don't blindly use the advice price as it can cost us money...
-    // One qty price
-    $price = $prod["price_me"];        // my price
-    $price = bcmul($price, "1.21", 5); // add VAT
-    $price = bcadd($price, "6.5", 5);  // Add transaction costs
-    $price = bcmul($price, "1.3", 5);  // Add 30% profit for me
 
-    $price = bcmul($price, "1.15", 5); // bol 15% costs
-    $price = bcadd($price, "1", 5);    // bol standard costs
-    $price = round($price, 2);
+    $price = $prod["calc_price_bol"];
 
     /*$margin = "1"; // 1 a.k.a. do nothing
     if ($price < $prod["price"]) {
@@ -158,7 +150,7 @@ foreach ($db->getAll("select bol_id, id, ean, title, price, price_me, stock from
             $price = $prod["price_me"];         // my price
             $price = bcmul($price, "1.21", 5);  // add VAT
             $price = bcadd($price, $postal, 5); // Add transaction costs
-            $price = bcmul($price, "1.3", 5);   // Add 30% profit for me
+            $price = bcmul($price, "1.1", 5);   // Add 10% profit for me
             $price = bcmul($price, $margin, 5); // TODO: Adviced margin by supplier
 
             $price = bcmul($price, "1.15", 5);  // bol 15% costs

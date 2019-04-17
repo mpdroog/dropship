@@ -48,6 +48,7 @@ foreach ($lines as $line) {
     $ean = $tok[1];
     $updated = $tok[10];
     $stock = $tok[7];
+    $price = $tok[5];
 
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
@@ -80,7 +81,7 @@ foreach ($lines as $line) {
         $pending = null; // force sync for new stock amount
     }
 
-    $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=?, bol_pending=? where ean=?", [$offerid, $updated, $stock, $pending, $ean]);
+    $stmt = $db->exec("update prods set bol_id=?, bol_updated=?, bol_stock=?, bol_pending=?, bol_price=? where ean=?", [$offerid, $updated, $stock, $pending, $price, $ean]);
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }

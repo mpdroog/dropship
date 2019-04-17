@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS prods (
   "stock" INTEGER NOT NULL,
   "price" real NOT NULL,
   "price_me" real NOT NULL,
+  "vat" integer not null,
   "time_updated" TEXT NOT NULL,
   "edc_artnum" TEXT NOT NULL,
   "bol_id" text,
@@ -33,7 +34,10 @@ CREATE TABLE IF NOT EXISTS prods (
   "prod_id" INTEGER,
   "cats" TEXT NOT NULL,
   "bol_stock" INTEGER,
-  "bol_pending" INTEGER
+  "bol_pending" INTEGER,
+  "bol_price" real,
+  "calc_price_bol" real not null,
+  "calc_price_site" real not null
 );
 
 CREATE TABLE IF NOT EXISTS bol_prods (

@@ -35,16 +35,16 @@ $filters = ["lingerie",
 "haak",
 "pantoffel",
 "dwangbuis",
-"kuis",
-"kooi",
-"ballon",
+//"kuis",
+//"kooi",
+//"ballon",
 "halsband",
 "riem",
-"bra",
+" bra",
 "harnas",
 "slip",
 "bh",
-"strap-on",
+//"strap-on",
 "s/"
 ];
 
@@ -98,7 +98,7 @@ while($xml->name == 'product')
         $title = strtolower($prod["title"]);
         foreach ($filters as $filter) {
                 if (strpos($title, $filter) !== false) {
-                    echo sprintf("Ignore (filter) %s\n", $prod["title"]);
+                    echo sprintf("Ignore (title.filter for %s) %s\n", $filter, $prod["title"]);
                     $filtern++;
                     $xml->next('product');
                     unset($element);
@@ -120,7 +120,7 @@ while($xml->name == 'product')
                 $title = strtolower($cat["title"]);
                 foreach ($filters as $filter) {
                 if (strpos($title, $filter) !== false) {
-                    echo sprintf("Ignore (filter) %s\n", $prod["title"]);
+                    echo sprintf("Ignore (cat.filter for %s) %s\n", $filter, $prod["title"]);
                     $filtern++;
                     $xml->next('product');
                     unset($element);
@@ -150,6 +150,19 @@ while($xml->name == 'product')
                 unset($element);
                 continue;
             }
+
+            $vat_factor = bcadd("1", bcdiv($prod["price"]["vatnl"], "100", 5), 5);
+
+            $price = $prod["price"]["b2b"];    // my price
+            $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
+            $price = bcadd($price, "6.5", 5);  // Add transaction costs
+            $price = bcmul($price, "1.1", 5);  // Add 10% profit for me
+            $site_price = round($price, 2);
+
+            $price = bcmul($price, "1.15", 5); // bol 15% costs
+            $price = bcadd($price, "1", 5);    // bol standard costs
+            $bol_price = round($price, 2);
+
 	$last_update = $db->getCell("SELECT time_updated from prods WHERE id=?", [$variant["id"]]);
 	if ($last_update === false) {
             echo sprintf("Add %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
@@ -162,10 +175,13 @@ while($xml->name == 'product')
 		"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
+                "vat" => $prod["price"]["vatnl"],
 		"time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
-                "edc_artnum" => $variant["subartnr"]
+                "edc_artnum" => $variant["subartnr"],
+                "calc_price_site" => $site_price,
+                "calc_price_bol" => $bol_price
             ]);
 	    $add++;
         } else if ($last_update !== $prod["modifydate"]) {
@@ -177,10 +193,13 @@ while($xml->name == 'product')
                 "stock" => $variant["stockestimate"],
                 "price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
+                "vat" => $prod["price"]["vatnl"],
                 "time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
-                "edc_artnum" => $variant["subartnr"]
+                "edc_artnum" => $variant["subartnr"],
+                "calc_price_site" => $site_price,
+                "calc_price_bol" => $bol_price
             ], ["id" => $variant["id"]]);
             $update++;
 	} else {
