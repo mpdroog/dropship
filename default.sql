@@ -15,6 +15,12 @@
 
 PRAGMA foreign_keys = false;
 
+CREATE TABLE IF NOT EXISTS brands (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "name" TEXT NOT NULL,
+  "discount" INTEGER NOT NULL
+);
+
 -- ----------------------------
 -- Table structure for prods
 -- ----------------------------
@@ -27,6 +33,8 @@ CREATE TABLE IF NOT EXISTS prods (
   "price" real NOT NULL,
   "price_me" real NOT NULL,
   "vat" integer not null,
+  "brand_id" integer not null,
+  "discount" integer not null,
   "time_updated" TEXT NOT NULL,
   "edc_artnum" TEXT NOT NULL,
   "bol_id" text,

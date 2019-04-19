@@ -3,10 +3,11 @@
  * Download full product feed (ZIP) and save as JSON.
  */
 require __DIR__ . "/core/init.php";
-const EDC_URL = "http://api.edc.nl/%s?key=35t55w94ec2833998860r3e5626eet1c&sort=xml&type=zip&lang=nl&version=2015";
+const EDC_URL_PRODS = "http://api.edc.nl/b2b_feed.php?key=35t55w94ec2833998860r3e5626eet1c&sort=xml&type=zip&lang=nl&version=2015";
+const EDC_URL_DISCOUNT = "https://www.erotischegroothandel.nl/download/discountoverview.csv?apikey=35t55w94ec2833998860r3e5626eet1c";
 
 function edc_zip($url, $fd) {
-    $ch = curl_init(sprintf(EDC_URL, $url));
+    $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_ENCODING, 'UTF-8');
     curl_setopt($ch, CURLOPT_FAILONERROR, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -25,8 +26,16 @@ function edc_zip($url, $fd) {
 
 $fname = __DIR__ . "/edc_prods.zip";
 $fd = fopen($fname, "w");
-$res = edc_zip("/b2b_feed.php", $fd);
+$res = edc_zip(EDC_URL_PRODS, $fd);
 fclose($fd);
 if ($res === true) {
-    echo sprintf("Written to %s\n", $fname);
+    echo sprintf("Feed written to %s\n", $fname);
+}
+
+$fname = __DIR__ . "/edc_discount.csv";
+$fd = fopen($fname, "w");
+$res = edc_zip(EDC_URL_DISCOUNT, $fd);
+fclose($fd);
+if ($res === true) {
+    echo sprintf("Feed written to %s\n", $fname);
 }

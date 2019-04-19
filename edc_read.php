@@ -57,6 +57,24 @@ foreach ($lines as $line) {
     //var_dump($res->errorInfo());
 }
 
+// Prod discounts
+$lines = explode("\n", file_get_contents(__DIR__ .  "/edc_discount.csv"));
+array_shift($lines);
+foreach ($lines as $line) {
+    $line = trim($line);
+    if ($line === "") continue;
+    // brandid;brandname;discount
+    // 171;Abierta Fina;10
+    $tok = explode(";", $line);
+
+    $db->insert("brands", [
+        "id" => $tok[0],
+        "name" => $tok[1],
+        "discount" => $tok[2]
+    ]);
+}
+
+// Products
 $xml = new XMLReader();
 if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
     user_error("ERR: Failed opening edc_prods.zip");
@@ -153,9 +171,23 @@ while($xml->name == 'product')
 
             $vat_factor = bcadd("1", bcdiv($prod["price"]["vatnl"], "100", 5), 5);
 
-            $price = $prod["price"]["b2b"];    // my price
+            $price = $prod["price"]["b2b"];         // my price
+            if (isset($prod["price"]["b2bsale"])) {
+                $price = $prod["price"]["b2bsale"]; // use discounted price!
+                if ($prod["price"]["discount"] === 'Y') {
+                    user_error("discount=Y with b2bsale, theoretically impossible?");
+                }
+            }
             $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
             $price = bcadd($price, "6.5", 5);  // Add transaction costs
+            if ($prod["price"]["discount"] === 'Y') {
+                // Subtract our discount from price
+                $discount = $db->getCell("select discount from brands where id = ?", [$prod["brand"]["id"]]);
+                if ($discount > 0) {
+                    $discount_factor = bcsub("1", bcdiv($discount, "100", 5), 5);
+                    $price = bcmul($price, $discount_factor, 5); // Subtract brand discount
+                }
+            }
             $price = bcmul($price, "1.1", 5);  // Add 10% profit for me
             $site_price = round($price, 2);
 
@@ -176,6 +208,8 @@ while($xml->name == 'product')
 		"price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
                 "vat" => $prod["price"]["vatnl"],
+                "brand_id" => $prod["brand"]["id"],
+                "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
 		"time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
@@ -194,6 +228,8 @@ while($xml->name == 'product')
                 "price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
                 "vat" => $prod["price"]["vatnl"],
+                "brand_id" => $prod["brand"]["id"],
+                "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
                 "time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
                 "bol_pending" => 0,
