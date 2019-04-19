@@ -1,6 +1,5 @@
 <?php
 /*
- * Sync ALL products with profitable prices.
  */
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
@@ -8,6 +7,17 @@ const API_URL = "https://api.bol.com/retailer";
 const API_CLIENTID = "8338f293-a8a0-4d6c-b660-7d77d76002cb";
 const API_SECRET = "aMPKgg6tsz_5fvRQbNweO4ejCaSdOI_cVb698D5YwfMy1GeAvm94YGeAD1JRjmI_eGKk0s2bRXc59NECLcrKSw";
 const API_USER = "sync";
+
+$arg_ean = null;
+if (count($_SERVER["argv"]) === 2) {
+    $arg_ean = $_SERVER["argv"][1];
+    if (! is_numeric($arg_ean)) {
+        exit("ERR: argument should be exportid");
+    }
+}
+if (count($_SERVER["argv"]) > 2) {
+    exit("ERR: argument should be ean");
+}
 
 function bol_bearer() {
     $session = curl_init("https://login.bol.com/token?grant_type=client_credentials");
@@ -103,85 +113,47 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 $now = time();
 $del = 0;
-// 0.Del prods in bol_del where tm_synced is null
-foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
-    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
-    if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
-        var_dump($res);
-        user_error("DELETE offer err.");
-    }
-    $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
-    echo sprintf("bol_del %s\n", $prod["bol_id"]);
-    $del++;
-    ratelimit($head);
-}
 
-// 2.Sync prods that have changed since last sync
+$added = 0;
+// Push everything we can
 $update = 0;
-foreach ($db->getAll("select bol_id, id, ean, title, bol_price, calc_price_bol, price, price_me, stock from prods where bol_id is not null and bol_price != calc_price_bol") as $prod) {
-    echo sprintf("\nean=%s price=%s price_me=%s", $prod["ean"], $prod["price"], $prod["price_me"]);
+foreach ($db->getAll("select bol_id, id, ean, title, calc_price_bol, stock from prods where bol_id is not null", []) as $prod) {
     $bol_id = $prod["bol_id"];
+    if (intval($prod["stock"]) >= 1000) {
+        $prod["stock"] = "999"; // limit to 999
+    }
+    // Always lower stock by 5 so we are on the save side
+    $prod["stock"] = bcsub($prod["stock"], "5", 0);
+    if ($prod["stock"] < 0) $prod["stock"] = "0";
 
-    $price = $prod["calc_price_bol"];
-
-    /*$margin = "1"; // 1 a.k.a. do nothing
-    if ($price < $prod["price"]) {
-        // Calculate percentage for quantity correcting
-        // 100-(4,90/4,95*100)
-        $margin = bcsub("100", bcmul( bcdiv($price, $prod["price"], 5), "100" , 5) , 5);
-        echo sprintf(" advice higher=%s %%", $margin);
-        // 1+(1%/100)
-        $margin = round(bcadd("1", bcdiv($margin, "100", 5), 5), 2);
-
-        $price = $prod["price"];
-    }*/
-    echo sprintf("1x price.sell=%s\n", $price);
+    list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
+        "amount" => $prod["stock"],
+        "managedByRetailer" => true
+    ]);
+    ratelimit($head);
+    if ($head["status"] !== 202) {
+        var_dump($res);
+        continue;
+    }
 
     $bundle = [[
         "quantity" => 1,
-        "price" => $price
+        "price" => $prod["calc_price_bol"]
     ]];
-    /*if ($prod["price_me"] < "20.00") {
-        // Sales strategy. Lower price as transaction costs lower
-        // 2 to 4
-        for ($qty = 2; $qty < 5; $qty++) {
-            $postal = bcdiv("6.5", $qty, 5);    // divide transaction costs over quantity
-
-            $price = $prod["price_me"];         // my price
-            $price = bcmul($price, "1.21", 5);  // add VAT
-            $price = bcadd($price, $postal, 5); // Add transaction costs
-            $price = bcmul($price, "1.1", 5);   // Add 10% profit for me
-            $price = bcmul($price, $margin, 5); // TODO: Adviced margin by supplier
-
-            $price = bcmul($price, "1.15", 5);  // bol 15% costs
-            $price = bcadd($price, "1", 5);     // bol standard costs
-            $price = round($price, 2);
-
-            $bundle[] = [
-                "quantity" => $qty,
-                "price" => $price
-            ];
-            echo sprintf("%sx price.sell=%s\n", $qty, $price);
-        }
-    }*/
-
     list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
         "pricing" => ["bundlePrices" => $bundle]
     ]);
-    if ($head["status"] !== 202) {
-        var_dump($res);
-        ratelimit($head);
-        continue;
-    }
+
     $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
-    echo sprintf("bol_update %s\n", $prod["ean"]);
+    echo sprintf("bol_update %s price=%s\n", $prod["ean"], $prod["calc_price_bol"]);
     $update++;
     ratelimit($head);
 }
 
 echo "del=$del\n";
+echo "added=$added\n";
 echo "update=$update\n";
 
