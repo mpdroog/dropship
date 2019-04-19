@@ -157,9 +157,9 @@ $added = 0;
     ratelimit($head);
 }*/
 
-// 2.Sync prods that have changed since last sync
+// 2.Sync prods that have a different stock amount or price compared to bol
 $update = 0;
-foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and bol_pending is null") as $prod) {
+foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and (bol_stock != stock or bol_price != calc_price_bol)") as $prod) {
     $bol_id = $prod["bol_id"];
     if (intval($prod["stock"]) >= 1000) {
         $prod["stock"] = "999"; // limit to 999
