@@ -169,18 +169,12 @@ while($xml->name == 'product')
                 continue;
             }
 
-            $vat_factor = bcadd("1", bcdiv($prod["price"]["vatnl"], "100", 5), 5);
-
-            $price = $prod["price"]["b2b"];         // my price
+            // Manual calculation of our own cost price
+            // http://cdn.edc.nl/manuals/manual_b2b_feeds_2016.pdf - 9.1 Manual calculation
+            $price = $prod["price"]["b2b"];
             if (isset($prod["price"]["b2bsale"])) {
                 $price = $prod["price"]["b2bsale"]; // use discounted price!
-                if ($prod["price"]["discount"] === 'Y') {
-                    user_error("discount=Y with b2bsale, theoretically impossible?");
-                }
-            }
-            $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
-            $price = bcadd($price, "6.5", 5);  // Add transaction costs
-            if ($prod["price"]["discount"] === 'Y') {
+            } else if ($prod["price"]["discount"] === 'Y') {
                 // Subtract our discount from price
                 $discount = $db->getCell("select discount from brands where id = ?", [$prod["brand"]["id"]]);
                 if ($discount > 0) {
@@ -188,6 +182,12 @@ while($xml->name == 'product')
                     $price = bcmul($price, $discount_factor, 5); // Subtract brand discount
                 }
             }
+
+            $vat_factor = bcadd("1", bcdiv($prod["price"]["vatnl"], "100", 5), 5);
+            // TODO: Crash here if VAT in other country is higher than NL? As we might loose money here
+            $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
+            $price = bcadd($price, "6.5", 5);  // Add transaction costs
+
             $price = bcmul($price, "1.1", 5);  // Add 10% profit for me
             $site_price = round($price, 2);
 
