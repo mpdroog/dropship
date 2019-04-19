@@ -7,6 +7,7 @@ const API_URL = "https://api.bol.com/retailer";
 const API_CLIENTID = "8338f293-a8a0-4d6c-b660-7d77d76002cb";
 const API_SECRET = "aMPKgg6tsz_5fvRQbNweO4ejCaSdOI_cVb698D5YwfMy1GeAvm94YGeAD1JRjmI_eGKk0s2bRXc59NECLcrKSw";
 const API_USER = "sync";
+const PACKING_ID = 3880;
 
 function bol_bearer() {
     $session = curl_init("https://login.bol.com/token?grant_type=client_credentials");
@@ -121,7 +122,7 @@ foreach ($res["orders"] as $order) {
 $xml = '<?xml version="1.0"?>
 <orderdetails>
 <customerdetails>
-	<email>rootdev@gmail.com</email>
+	<email>' . $ship["email"] .'</email>
 	<apikey>35t55w94ec2833998860r3e5626eet1c</apikey>
 	<output>advanced</output>
 </customerdetails>
@@ -132,7 +133,7 @@ $xml = '<?xml version="1.0"?>
 	<postalcode>' . $ship["zipCode"] . '</postalcode>
 	<city>' . $ship["city"] . '</city>
 	<country>' . $ship["countryCode"] . '</country>
-	<phone>''</phone>
+        <packing_slip_id>' . PACKING_ID . '</packing_slip_id>
 </receiver>
 <products>' . $xprods . '</products>
 </orderdetails>';
