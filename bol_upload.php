@@ -118,7 +118,7 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 
 $added = 0;
 // 1.Sync prods not in Bol
-/*foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null") as $prod) {
+/*foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
     $price = $prod["calc_price_bol"];
     list($res, $head) = bol_http("POST", "/offers/", [
         "ean" => $prod["ean"],
@@ -144,6 +144,7 @@ $added = 0;
         ]
     ]);
     if ($head["status"] !== 202) {
+        $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
         var_dump($res);
         ratelimit($head);
         continue;
@@ -162,7 +163,7 @@ $added = 0;
 $qstock = "bol_stock < 500 and bol_stock+5 > stock";
 $qprice = "bol_price != calc_price_bol";
 
-$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_pending is null and (($qstock) OR ($qprice))");
+$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_error is null and bol_pending is null and (($qstock) OR ($qprice))");
 $update = 0;
 foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
@@ -182,6 +183,7 @@ foreach ($prods as $prod) {
             "managedByRetailer" => true
         ]);
         if ($head["status"] !== 202) {
+            $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
             var_dump($res);
             continue;
         }
@@ -202,6 +204,7 @@ foreach ($prods as $prod) {
             "pricing" => ["bundlePrices" => $bundle]
         ]);
         if ($head["status"] !== 202) {
+            $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
             var_dump($res);
             continue;
         }

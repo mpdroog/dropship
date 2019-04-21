@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS prods (
   "edc_artnum" TEXT NOT NULL,
   "bol_id" text,
   "bol_updated" text,
+  "bol_error" INTEGER,
   "prod_id" INTEGER,
   "cats" TEXT NOT NULL,
   "bol_stock" INTEGER,
