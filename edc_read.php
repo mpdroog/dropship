@@ -240,7 +240,7 @@ while($xml->name == 'product')
                 "edc_artnum" => $variant["subartnr"],
                 "calc_price_site" => $site_price,
                 "calc_price_bol" => $bol_price
-            ], ["id" => $variant["id"]]);
+            ], ["id" => $variant["id"]], null);
             $update++;
 	} else {
             echo sprintf("Nochange %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
