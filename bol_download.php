@@ -21,6 +21,10 @@ if ($arg_exportid !== null) {
     $exportid = $arg_exportid;
 } else {
     $res = bol_http("POST", "/offers/export", ["format" => "CSV"]);
+    if (! isset($res["id")) {
+        var_dump($res);
+        user_error("offers/export invalid res.");
+    }
     $exportid = $res["id"];
 }
 
