@@ -158,53 +158,60 @@ $added = 0;
 }*/
 
 // 2.Sync prods that have a different stock amount or price compared to bol
+// TODO: Horrible complex SQL-logic
+$qstock = "bol_stock < 500 and bol_stock+5 > stock";
+$qprice = "bol_price != calc_price_bol";
+
+$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_pending is null and (($qstock) OR ($qprice))");
 $update = 0;
-foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and bol_stock < 500 and bol_stock+5 != stock") as $prod) {
+foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
-    if (intval($prod["stock"]) >= 1000) {
-        $prod["stock"] = "999"; // limit to 999
-    }
-    // Always lower stock by 5 so we are on the save side
-    $prod["stock"] = bcsub($prod["stock"], "5", 0);
-    if ($prod["stock"] < 0) $prod["stock"] = "0";
+    $has_stock = $prod["bol_stock"] !== "0" && $prod["stock"] !== "0";
+    $has_diff = intval($prod["bol_stock"])+5 > intval($prod["stock"]);
+    if ($has_stock && $has_diff) {
+        if (intval($prod["stock"]) >= 1000) {
+            $prod["stock"] = "999"; // limit to 999
+        }
+        // Always lower stock by 5 so we are on the save side
+        $prod["stock"] = bcsub($prod["stock"], "5", 0);
+        if ($prod["stock"] < 0) $prod["stock"] = "0";
 
-    list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
-        "amount" => $prod["stock"],
-        "managedByRetailer" => true
-    ]);
-    if ($head["status"] !== 202) {
-        var_dump($res);
-        continue;
+        echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
+        list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
+            "amount" => $prod["stock"],
+            "managedByRetailer" => true
+        ]);
+        if ($head["status"] !== 202) {
+            var_dump($res);
+            continue;
+        }
+        ratelimit($head);
+        $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
+        if ($stmt->rowCount() !== 1) {
+            user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+        }
+        $update++;
     }
-    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
-    if ($stmt->rowCount() !== 1) {
-        user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+    if ($prod["bol_price"] !== $prod["calc_price_bol"]) {
+        $bundle = [[
+            "quantity" => 1,
+            "price" => $prod["calc_price_bol"]
+        ]];
+        echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
+        list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
+            "pricing" => ["bundlePrices" => $bundle]
+        ]);
+        if ($head["status"] !== 202) {
+            var_dump($res);
+            continue;
+        }
+        ratelimit($head);
+        $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
+        if ($stmt->rowCount() !== 1) {
+            user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+        }
+        $update++;
     }
-    echo sprintf("bol_update %s\n", $prod["ean"]);
-    $update++;
-    ratelimit($head);
-}
-foreach ($db->getAll("select bol_id, id, ean, title, price, stock from prods where bol_id is not null and (bol_price != calc_price_bol)") as $prod) {
-    $bol_id = $prod["bol_id"];
-
-    $bundle = [[
-        "quantity" => 1,
-        "price" => $prod["calc_price_bol"]
-    ]];
-    list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
-        "pricing" => ["bundlePrices" => $bundle]
-    ]);
-    if ($head["status"] !== 202) {
-        var_dump($res);
-        continue;
-    }
-    $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
-    if ($stmt->rowCount() !== 1) {
-        user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
-    }
-    echo sprintf("bol_update %s\n", $prod["ean"]);
-    $update++;
-    ratelimit($head);
 }
 
 echo "del=$del\n";
