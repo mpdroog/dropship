@@ -5,3 +5,14 @@ Fully-automated EDC > Bol sync
 apt-get install php7.0-curl php7.0-xml php7.0-sqlite
 sqlite3 db.sqlite < db_prod.sql
 ```
+
+/etc/cron.d/dropship
+```
+# daily
+5 0 * * * www-data /usr/bin/php /var/www/dropship/edc_download.php && php /var/www/dropship/edc_read.php
+# hourly
+0 */1 * * * www-data /usr/bin/php /var/www/dropship/bol_download.php && php /var/www/dropship/bol_read.php
+15 */1 * * * www-data /usr/bin/php /var/www/dropship/edc_stock_download.php && php /var/www/dropship/edc_stock_read.php
+17 */1 * * * www-data /usr/bin/php /var/www/dropship/bol_upload.php
+
+```
