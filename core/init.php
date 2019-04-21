@@ -28,3 +28,6 @@ function report($errno, $errstr, $errfile, $errline) {
   exit(1);
 }
 
+$options = getopt("v::");
+define("VERBOSE", isset($options["v"]));
+

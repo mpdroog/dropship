@@ -33,16 +33,12 @@ $nomatch = 0;
 $mismatch = 0;
 $nochange = 0;
 $update = 0;
-echo $head;
-
-// offerId,ean,conditionName,conditionCategory,conditionComment,bundlePricesPrice,fulfilmentDeliveryCode,stockAmount,onHoldByRetailer,fulfilmentType,mutationDateTime
 
 $now = time();
 $txn = $db->txn();
 foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
-    var_dump($tok);
 
     $offerid = $tok[0];
     $ean = $tok[1];
@@ -72,7 +68,7 @@ foreach ($lines as $line) {
     }
     if ($l["bol_updated"] !== null && $l["bol_updated"] === $updated) {
         $nochange++;
-        echo sprintf("EAN(%s) no change.\n", $ean);
+        if(VERBOSE) echo sprintf("EAN(%s) no change.\n", $ean);
         continue;
     }
 
