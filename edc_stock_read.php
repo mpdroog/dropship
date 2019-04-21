@@ -44,7 +44,7 @@ while($xml->name == 'product')
 
         if (is_array($prod["ean"])) $prod["ean"] = trim(implode(" ", $prod["ean"]));
         if (strlen($prod["ean"]) === 0) {
-            echo "Product missing EAN, SKIP...\n";
+            if (VERBOSE) echo "Product missing EAN, SKIP...\n";
             $error++;
             $xml->next('product');
             unset($element);
@@ -62,7 +62,7 @@ while($xml->name == 'product')
             $db->exec("UPDATE `prods` SET `stock`=?, time_updated=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $modified, $prod["variantid"], $prod["ean"]]);
             $update++;
 	} else {
-            echo sprintf("Nochange %s\n", $prod["ean"]);
+            if (VERBOSE) echo sprintf("Nochange %s\n", $prod["ean"]);
             $nochange++;
 	}
 	
