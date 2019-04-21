@@ -216,7 +216,7 @@ while($xml->name == 'product')
                 "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
 		"time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
-                "bol_pending" => 0,
+                "bol_pending" => null, // ready for diff+sync
                 "edc_artnum" => $variant["subartnr"],
                 "calc_price_site" => $site_price,
                 "calc_price_bol" => $bol_price
@@ -236,7 +236,7 @@ while($xml->name == 'product')
                 "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
                 "time_updated" => $prod["modifydate"],
                 "cats" => implode(",", $catids),
-                "bol_pending" => 0,
+                "bol_pending" => null, // reeady for diff+sync
                 "edc_artnum" => $variant["subartnr"],
                 "calc_price_site" => $site_price,
                 "calc_price_bol" => $bol_price
