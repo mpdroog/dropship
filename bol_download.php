@@ -20,8 +20,8 @@ $res = null;
 if ($arg_exportid !== null) {
     $exportid = $arg_exportid;
 } else {
-    $res = bol_http("POST", "/offers/export", ["format" => "CSV"]);
-    if (! isset($res["id")) {
+    list($res, $head) = bol_http("POST", "/offers/export", ["format" => "CSV"]);
+    if (! isset($res["id"])) {
         var_dump($res);
         user_error("offers/export invalid res.");
     }
@@ -33,7 +33,7 @@ $url = "/process-status/$exportid";
 $uuid = null;
 while (true) {
     if ($res === null) {
-        $res = bol_http("GET", $url, []);
+        list($res, $head) = bol_http("GET", $url, []);
     }
     if (VERBOSE) echo sprintf("id=%s status=%s\n", $exportid, $res["status"]);
     if ($res["status"] === "SUCCESS") {
