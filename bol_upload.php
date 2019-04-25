@@ -67,23 +67,20 @@ $added = 0;
 
 // 2.Sync prods that have a different stock amount or price compared to bol
 // TODO: Horrible complex SQL-logic
-$qstock = "bol_stock < 500 and bol_stock+5 > stock";
-$qprice = "bol_price != calc_price_bol";
 
-$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_error is null and bol_pending is null and (($qstock) OR ($qprice))");
+$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_error is null");
 $update = 0;
 foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
-    $has_stock = $prod["bol_stock"] !== "0" && $prod["stock"] !== "0";
-    $has_diff = intval($prod["bol_stock"])+5 > intval($prod["stock"]);
-    if ($has_stock && $has_diff) {
-        if (intval($prod["stock"]) >= 1000) {
-            $prod["stock"] = "999"; // limit to 999
-        }
-        // Always lower stock by 5 so we are on the save side
-        $prod["stock"] = bcsub($prod["stock"], "5", 0);
-        if ($prod["stock"] < 0) $prod["stock"] = "0";
 
+    // make them comparable
+    if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
+    //$prod["bol_stock"] = intval($prod["bol_stock"])-5;
+    $prod["stock"] = bcsub($prod["stock"], "5", 0);
+    if ($prod["stock"] < 0) $prod["stock"] = "0";
+    if ($prod["bol_stock"] < 0) $prod["bol_stock"] = "0";
+
+    if ($prod["bol_stock"] !== $prod["stock"]) {
         echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
             "amount" => $prod["stock"],
@@ -100,7 +97,10 @@ foreach ($prods as $prod) {
             user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
         }
         $update++;
+    } else {
+        if (VERBOSE) echo sprintf("bol.stock same %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
     }
+
     if ($prod["bol_price"] !== $prod["calc_price_bol"]) {
         $bundle = [[
             "quantity" => 1,

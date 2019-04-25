@@ -59,7 +59,7 @@ while($xml->name == 'product')
             continue;
         } else if ($stock !== $prod["qty"]) {
             echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
-            $db->exec("UPDATE `prods` SET `stock`=?, time_updated=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $modified, $prod["variantid"], $prod["ean"]]);
+            $db->exec("UPDATE `prods` SET `stock`=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $prod["variantid"], $prod["ean"]]);
             $update++;
 	} else {
             if (VERBOSE) echo sprintf("Nochange %s\n", $prod["ean"]);

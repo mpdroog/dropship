@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS prods (
   "title" TEXT NOT NULL,
   "description" TEXT NOT NULL,
   "ean" TEXT NOT NULL,
-  "stock" INTEGER NOT NULL,
+  "stock" INTEGER,
   "price" real NOT NULL,
   "price_me" real NOT NULL,
   "vat" integer not null,

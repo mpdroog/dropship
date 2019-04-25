@@ -192,11 +192,12 @@ while($xml->name == 'product')
             $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
             $price = bcadd($price, "6.5", 5);  // Add transaction costs
 
-            $price = bcmul($price, "1.1", 5);  // Add 10% profit for me
+            //$price = bcmul($price, "1.05", 5);  // Add 5% profit for me
             $site_price = round($price, 2);
 
             $price = bcmul($price, "1.15", 5); // bol 15% costs
             $price = bcadd($price, "1", 5);    // bol standard costs
+            $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
             $bol_price = round($price, 2);
 
 	$last_update = $db->getCell("SELECT time_updated from prods WHERE id=?", [$variant["id"]]);
@@ -208,7 +209,7 @@ while($xml->name == 'product')
 		"title" => $prod["title"] . " " . $variant["title"],
 		"description" => $prod["description"],
 		"ean" => $variant["ean"],
-		"stock" => $variant["stockestimate"],
+		//"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
                 "vat" => $prod["price"]["vatnl"],
@@ -222,13 +223,13 @@ while($xml->name == 'product')
                 "calc_price_bol" => $bol_price
             ]);
 	    $add++;
-        } else if ($last_update !== $prod["modifydate"]) {
+        } else if ($last_update < $prod["modifydate"]) {
             echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
                 "title" => $prod["title"] . " " . $variant["title"],
                 "description" => $prod["description"],
                 "ean" => $variant["ean"],
-                "stock" => $variant["stockestimate"],
+                //"stock" => $variant["stockestimate"],
                 "price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
                 "vat" => $prod["price"]["vatnl"],
