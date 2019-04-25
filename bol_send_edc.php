@@ -3,67 +3,28 @@
  * Sync order from Bol to EDC
  */
 require __DIR__ . "/core/init.php";
-const API_URL = "https://api.bol.com/retailer";
-const API_CLIENTID = "8338f293-a8a0-4d6c-b660-7d77d76002cb";
-const API_SECRET = "aMPKgg6tsz_5fvRQbNweO4ejCaSdOI_cVb698D5YwfMy1GeAvm94YGeAD1JRjmI_eGKk0s2bRXc59NECLcrKSw";
-const API_USER = "sync";
+require __DIR__ . "/core/db.php";
+require __DIR__ . "/core/error.php";
+require __DIR__ . "/core/bol.php";
+require __DIR__ . "/core/edc.php";
+
+// Package
 const PACKING_ID = 3880;
+$db = new \core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$orderdb = new \core\Db(sprintf("sqlite:%s/orders.sqlite", __DIR__), "", "");
+$countries = [
+    "NL" => "1",
+    "BE" => "2"
+];
 
-function bol_bearer() {
-    $session = curl_init("https://login.bol.com/token?grant_type=client_credentials");
-    curl_setopt($session, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-    curl_setopt($session, CURLOPT_USERPWD, API_CLIENTID . ':' . API_SECRET);
-    curl_setopt($session, CURLOPT_POST, true);
-    curl_setopt($session, CURLOPT_ENCODING, 'UTF-8');
-    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-
-    $res = curl_exec($session);
-    curl_close($session);
-    $j = json_decode($res, true);
-    if (! is_array($j)) {
-        user_error("http_bearer: invalid res=$res");
-    }
-    if ($j["token_type"] !== "Bearer") {
-        user_error("http_bearer: unsupported token type=" . $j["token_type"]);
-    }
-    if ($j["scope"] !== "RETAILER") {
-        var_dump($j);
-        user_error("http_bearer: account does not have retailer role but role=" . $j["scope"]);
-    }
-
-    $exp = $j["expires_in"];
-    return [
-        "expire" => strtotime("+$exp sec"),
-        "bearer" => $j["access_token"]
-    ];
+$lines = explode(";", file_get_contents(__DIR__ . "/default_sync.sql"));
+foreach ($lines as $line) {
+    if (strlen(trim($line)) === 0) continue;
+    //echo $line;
+    $res = $db->exec($line);
+    //var_dump($res->errorInfo());
 }
 
-function bol_http($method, $url, $d = []) {
-    global $token;
-    if (! is_array($token) || $token["expire"] < time()) {
-        // Lazy auto-request new token
-        $token = bol_bearer();
-    }
-
-    $bearer = $token["bearer"];
-    $session = curl_init(API_URL . $url);
-    $headers = ['Accept: application/vnd.retailer.v3+json', sprintf('Authorization: Bearer %s', $bearer)];
-    if (count($d) > 0) {
-        curl_setopt($session, CURLOPT_POST, true);
-        curl_setopt($session, CURLOPT_POSTFIELDS, json_encode($d));
-        $headers[] = 'Content-Type: application/vnd.retailer.v3+json';
-    }
-
-    curl_setopt($session, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($session, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($session, CURLOPT_ENCODING, 'UTF-8');
-    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($session, CURLOPT_SSL_VERIFYPEER, false);
-    $response = curl_exec($session);
-    curl_close($session);
-    $results = json_decode($response, true);
-    return $results;
-}
 function edc_http($xml) {
         // Send the XML request
         $postfields = 'data='.$xml;
@@ -88,6 +49,7 @@ function edc_http($xml) {
                         echo 'The order was successful. The following output was received from EDC:'.PHP_EOL;
                         print_r($json);
                         echo '</pre>';
+                        return $json["ordernumber"];
 
                 // Failure
                 } else {
@@ -97,23 +59,33 @@ function edc_http($xml) {
                         echo '</pre>';
                 }
         }
+	return null;
 }
 
-$res = bol_http("GET", "/orders", []);
+list($res, $headers) = bol_http("GET", "/orders", []);
+$res["orders"] = $res["orders"] ?? [];
+var_dump($res);
 
 foreach ($res["orders"] as $order) {
-    var_dump($order);
-    $details = bol_http("GET", "/orders/" . $order["orderId"]);
-    var_dump($details);
+    if (VERBOSE) var_dump($order);
+    if ("1" === $orderdb->getCell("select 1 from orders where bol_id = ?", [$order["orderId"]])) {
+        if (VERBOSE) echo "Already processed " . $order["orderId"] . "\n";
+        continue;
+    }
+    list($details, $header) = bol_http("GET", "/orders/" . $order["orderId"]);
+    if (VERBOSE) var_dump($details);
 
     $ship = $details["customerDetails"]["shipmentDetails"];
+    if (isset($ship["houseNumberExtended"])) {
+        $ship["houseNumber"] .= " " . $ship["houseNumberExtended"];
+    }
     $prods = $details["orderItems"];
 
     $xprods = [];
     foreach ($prods as $prod) {
-        $artnr = $db->getCell("select edc_artnum from prods where ean=?", [$prods["ean"]]);
+        $artnr = $db->getCell("select edc_artnum from prods where ean=?", [$prod["ean"]]);
         if (strlen($artnr) === 0) {
-            user_error("failed resolving artnr for ean " . $prods["ean"]);
+            user_error("failed resolving artnr for ean " . $prod["ean"]);
         }
         $xprods[] = "<artnr>$artnr</artnr>";
     }
@@ -122,21 +94,30 @@ foreach ($res["orders"] as $order) {
 $xml = '<?xml version="1.0"?>
 <orderdetails>
 <customerdetails>
-	<email>' . $ship["email"] .'</email>
+	<email>rootdev@gmail.com</email>
 	<apikey>35t55w94ec2833998860r3e5626eet1c</apikey>
 	<output>advanced</output>
 </customerdetails>
 <receiver>
 	<name>' . $ship["firstName"] . ' ' . $ship["surName"]  . '</name>
+        <extra_email>' . $ship["email"] .'</extra_email>
 	<street>' . $ship["streetName"] . '</street>
-	<house_nr>' . $ship["houseNumber"] . $ship["houseNumberExtended"] . '</house_nr>
+	<house_nr>' . $ship["houseNumber"] . '</house_nr>
 	<postalcode>' . $ship["zipCode"] . '</postalcode>
 	<city>' . $ship["city"] . '</city>
-	<country>' . $ship["countryCode"] . '</country>
+	<country>' . $countries[ $ship["countryCode"] ] . '</country>
         <packing_slip_id>' . PACKING_ID . '</packing_slip_id>
+	<own_ordernumber>' . $order["orderId"] . '</own_ordernumber>
 </receiver>
 <products>' . $xprods . '</products>
 </orderdetails>';
 
-    die();
+    if (VERBOSE) var_dump($xml);
+    //$id = edc_http($xml);
+    $id = "99";
+    echo sprintf("Bol id=%s edc=%s\n", $order["orderId"], $id);
+    $orderdb->insert("orders", [
+        "bol_id" => $order["orderId"],
+        "edc_id" => $id
+    ]);
 }
