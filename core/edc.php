@@ -35,4 +35,35 @@ function edc_zip($url, $fd) {
     return [$res_headers, $res];
 }
 
+function edc_order($xml) {
+    $postfields = 'data='.$xml;
+
+    $ch = curl_init("https://www.erotischegroothandel.nl/ao/");
+    if ($ch === false) {
+        user_error('curl_init fail');
+    }
+
+    $ok = 1;
+    $ok &= curl_setopt($ch, CURLOPT_HEADER, 0);
+    $ok &= curl_setopt($ch, CURLOPT_POST, 1);
+    $ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, $postfields);
+    if ($ok !== 1) {
+        user_error("curl_setopt fail");
+    }
+
+    $result = curl_exec($ch);
+    curl_close($ch);
+
+    if ($result === false) {
+        user_error('curl_exec fail');
+    }
+
+    $json = json_decode($result, true);
+    if (! is_array($json) || strtoupper($json["result"]) === "OK") {
+        print_r($json);
+        user_error("edc_order fail");
+    }
+    return $json["ordernumber"];
+}
 

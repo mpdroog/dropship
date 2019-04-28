@@ -21,7 +21,8 @@ PRAGMA foreign_keys = false;
 CREATE TABLE IF NOT EXISTS orders (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   "bol_id" INTEGER NOT NULL,
-  "edc_id" INTEGER
+  "edc_id" INTEGER,
+  "tnt_track" TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol"
