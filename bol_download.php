@@ -41,6 +41,7 @@ while (true) {
         break;
     }
     if ($res["status"] !== "PENDING") {
+        var_dump($res);
         user_error("Unprocessible status=" . $res["status"]);
     }
 
