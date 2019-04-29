@@ -60,7 +60,7 @@ function edc_order($xml) {
     }
 
     $json = json_decode($result, true);
-    if (! is_array($json) || strtoupper($json["result"]) === "OK") {
+    if (! is_array($json) || strtoupper($json["result"]) !== "OK") {
         print_r($json);
         user_error("edc_order fail");
     }
