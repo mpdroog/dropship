@@ -54,6 +54,11 @@ foreach ($res["orders"] as $order) {
     }
     $xprods = implode("\n", $xprods);
 
+    $txn = $db->txn();
+    $row_id = $orderdb->insert("orders", [
+        "bol_id" => $order["orderId"],
+        "edc_id" => null
+    ]);
     $xml = '<?xml version="1.0"?>
     <orderdetails>
     <customerdetails>
@@ -78,8 +83,6 @@ foreach ($res["orders"] as $order) {
 
     $id = edc_order($xml);
     echo sprintf("Bol id=%s edc=%s\n", $order["orderId"], $id);
-    $orderdb->insert("orders", [
-        "bol_id" => $order["orderId"],
-        "edc_id" => $id
-    ]);
+    $orderdb->exec("update orders set edc_id=? where id = ?", [$id, $row_id]);
+    $txn->commit();
 }
