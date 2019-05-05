@@ -25,9 +25,9 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 
 $added = 0;
 // 1.Sync prods not in Bol
-/*foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
+foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
     $price = $prod["calc_price_bol"];
-    list($res, $head) = bol_http("POST", "/offers/", [
+    list($res, $head) = bol_http("POST", "/offers", [
         "ean" => $prod["ean"],
         "condition" => [
             "name" => "NEW"
@@ -63,7 +63,7 @@ $added = 0;
     echo sprintf("bol_add %s\n", $prod["ean"]);
     $added++;
     ratelimit($head);
-}*/
+}
 
 // 2.Sync prods that have a different stock amount or price compared to bol
 // TODO: Horrible complex SQL-logic
