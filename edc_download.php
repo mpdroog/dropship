@@ -15,13 +15,14 @@ if ($res !== true) {
 
 if (VERBOSE)  echo sprintf("Feed written to %s\n", $fname);
 
-$fname = __DIR__ . "/edc_discount.csv";
+/*$fname = __DIR__ . "/edc_discount.csv";
 $fd = fopen($fname, "w");
 list($headers, $res) = edc_zip(EDC_URL_DISCOUNT, $fd);
 fclose($fd);
 if ($res !== true) {
     user_error("edc_discount fail");
-}
+}*/
+echo "TODO: edc_discount automate\n";
 
 if (VERBOSE) echo sprintf("Feed written to %s\n", $fname);
 

@@ -86,11 +86,13 @@ foreach ($lines as $line) {
 $txn->commit();
 $db->close();
 
-print "nomatch=$nomatch\n";
-print "mismatch=$mismatch\n";
-print "Update=$update\n";
-print "Nochange=$nochange\n";
-print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
-print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
-print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
-print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+if (VERBOSE) {
+    print "nomatch=$nomatch\n";
+    print "mismatch=$mismatch\n";
+    print "Update=$update\n";
+    print "Nochange=$nochange\n";
+    print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+    print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+    print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+    print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+}

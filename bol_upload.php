@@ -18,7 +18,7 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
         user_error("DELETE offer err.");
     }
     $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
-    echo sprintf("bol_del %s\n", $prod["bol_id"]);
+    if (VERBOSE) echo sprintf("bol_del %s\n", $prod["bol_id"]);
     $del++;
     ratelimit($head);
 }
@@ -26,6 +26,7 @@ foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $p
 $added = 0;
 // 1.Sync prods not in Bol
 foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
+    if (VERBOSE) echo sprintf("bol_add %s\n", $prod["ean"]);
     if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
     $price = $prod["calc_price_bol"];
     list($res, $head) = bol_http("POST", "/offers", [
@@ -61,7 +62,6 @@ foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, st
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
-    echo sprintf("bol_add %s\n", $prod["ean"]);
     $added++;
     ratelimit($head);
 }
@@ -82,7 +82,7 @@ foreach ($prods as $prod) {
     if ($prod["bol_stock"] < 0) $prod["bol_stock"] = "0";
 
     if ($prod["bol_stock"] !== $prod["stock"]) {
-        echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
+        if (VERBOSE) echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
             "amount" => $prod["stock"],
             "managedByRetailer" => true
@@ -107,7 +107,7 @@ foreach ($prods as $prod) {
             "quantity" => 1,
             "price" => $prod["calc_price_bol"]
         ]];
-        echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
+        if (VERBOSE) echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
             "pricing" => ["bundlePrices" => $bundle]
         ]);
@@ -125,7 +125,8 @@ foreach ($prods as $prod) {
     }
 }
 
-echo "del=$del\n";
-echo "added=$added\n";
-echo "update=$update\n";
-
+if (VERBOSE) {
+    echo "del=$del\n";
+    echo "added=$added\n";
+    echo "update=$update\n";
+}

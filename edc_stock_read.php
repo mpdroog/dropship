@@ -58,7 +58,7 @@ while($xml->name == 'product')
             unset($element);
             continue;
         } else if ($stock !== $prod["qty"]) {
-            echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
+            if (VERBOSE) echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
             $db->exec("UPDATE `prods` SET `stock`=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $prod["variantid"], $prod["ean"]]);
             $update++;
 	} else {
@@ -73,12 +73,14 @@ $txn->commit();
 $db->close();
 $xml->close();
 
-print "Ignore=$ignore\n";
-print "Update=$update\n";
-print "Nochange=$nochange\n";
-print "Error=$error\n";
-print "Filter=$filtern\n";
-print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
-print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
-print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
-print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+if (VERBOSE) {
+    print "Ignore=$ignore\n";
+    print "Update=$update\n";
+    print "Nochange=$nochange\n";
+    print "Error=$error\n";
+    print "Filter=$filtern\n";
+    print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+    print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+    print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+    print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+}

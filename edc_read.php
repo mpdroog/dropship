@@ -192,12 +192,12 @@ while($xml->name == 'product')
             $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
             $price = bcadd($price, "6.5", 5);  // Add transaction costs
 
-            //$price = bcmul($price, "1.05", 5);  // Add 5% profit for me
+            $price = bcmul($price, "1.05", 5);  // Add 5% profit for me
             $site_price = round($price, 2);
 
             $price = bcmul($price, "1.15", 5); // bol 15% costs
             $price = bcadd($price, "1", 5);    // bol standard costs
-            $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
+            // $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
             $bol_price = round($price, 2);
 
 	$last_update = $db->getCell("SELECT time_updated from prods WHERE id=?", [$variant["id"]]);
