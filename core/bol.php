@@ -89,7 +89,7 @@ function ratelimit(array $head) {
         if ($retry < 10) {
             $retry = 10;
         }
-        echo sprintf("[ratelimit] sleep %d sec..", $retry);
+        if (VERBOSE) echo sprintf("[ratelimit] sleep %d sec..", $retry);
         sleep($retry);
     }
 }

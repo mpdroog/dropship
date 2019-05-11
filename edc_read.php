@@ -108,7 +108,7 @@ while($xml->name == 'product')
 	$prod = xml($xml->readOuterXML());
 
 	if ($prod["restrictions"]["platform"] === 'Y') {
-		echo sprintf("Ignore (not allowed on Bol) %s\n", $prod["title"]);
+		if (VERBOSE) echo sprintf("Ignore (not allowed on Bol) %s\n", $prod["title"]);
 		$ignore++;
 		$xml->next('product');
         	unset($element);
@@ -120,7 +120,7 @@ while($xml->name == 'product')
         $title = strtolower($prod["title"]);
         foreach ($filters as $filter) {
                 if (strpos($title, $filter) !== false) {
-                    echo sprintf("Ignore (title.filter for %s) %s\n", $filter, $prod["title"]);
+                    if (VERBOSE) echo sprintf("Ignore (title.filter for %s) %s\n", $filter, $prod["title"]);
                     $filtern++;
                     $xml->next('product');
                     unset($element);
@@ -142,7 +142,7 @@ while($xml->name == 'product')
                 $title = strtolower($cat["title"]);
                 foreach ($filters as $filter) {
                 if (strpos($title, $filter) !== false) {
-                    echo sprintf("Ignore (cat.filter for %s) %s\n", $filter, $prod["title"]);
+                    if (VERBOSE) echo sprintf("Ignore (cat.filter for %s) %s\n", $filter, $prod["title"]);
                     $filtern++;
                     $xml->next('product');
                     unset($element);
@@ -166,7 +166,7 @@ while($xml->name == 'product')
             if (! isset($variant["title"])) $variant["title"] = "";
             if (is_array($variant["ean"])) $variant["ean"] = trim(implode(" ", $variant["ean"]));
             if (strlen($variant["ean"]) === 0) {
-                echo "Product missing EAN, SKIP...\n";
+                if (VERBOSE) echo "Product missing EAN, SKIP...\n";
                 $error++;
                 $xml->next('product');
                 unset($element);
@@ -202,7 +202,7 @@ while($xml->name == 'product')
 
 	$last_update = $db->getCell("SELECT time_updated from prods WHERE id=?", [$variant["id"]]);
 	if ($last_update === false) {
-            echo sprintf("Add %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            if (VERBOSE) echo sprintf("Add %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
 	    $db->insert("prods", [
 		"id" => $variant["id"],
 		"prod_id" => $prod["id"],
@@ -224,7 +224,7 @@ while($xml->name == 'product')
             ]);
 	    $add++;
         } else if ($last_update < $prod["modifydate"]) {
-            echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            if (VERBOSE) echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
                 "title" => $prod["title"] . " " . $variant["title"],
                 "description" => $prod["description"],
@@ -244,7 +244,7 @@ while($xml->name == 'product')
             ], ["id" => $variant["id"]], null);
             $update++;
 	} else {
-            echo sprintf("Nochange %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            if (VERBOSE) echo sprintf("Nochange %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $nochange++;
 	}
 
@@ -257,13 +257,16 @@ $txn->commit();
 $db->close();
 $xml->close();
 
-print "Ignore=$ignore\n";
-print "Add=$add\n";
-print "Update=$update\n";
-print "Nochange=$nochange\n";
-print "Error=$error\n";
-print "Filter=$filtern\n";
-print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
-print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
-print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
-print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+if (VERBOSE) {
+    print "Ignore=$ignore\n";
+    print "Add=$add\n";
+    print "Update=$update\n";
+    print "Nochange=$nochange\n";
+    print "Error=$error\n";
+    print "Filter=$filtern\n";
+    print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+    print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+    print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+    print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+}
+
