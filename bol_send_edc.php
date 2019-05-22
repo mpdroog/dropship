@@ -27,7 +27,6 @@ foreach ($lines as $line) {
 
 list($res, $headers) = bol_http("GET", "/orders", []);
 $res["orders"] = $res["orders"] ?? [];
-if (VERBOSE) var_dump($res);
 
 foreach ($res["orders"] as $order) {
     if (VERBOSE) var_dump($order);
@@ -79,11 +78,14 @@ foreach ($res["orders"] as $order) {
     </orderdetails>';
     if (VERBOSE) var_dump($xml);
 
-    $id = edc_order($xml);
-    if (! is_numeric($id)) {
-        user_error("edc_order did not return valid id.");
+    $id = "TEST001";
+    if (WRITE) {
+        $id = edc_order($xml);
     }
     echo sprintf("Bol id=%s edc=%s\n", $order["orderId"], $id);
     $orderdb->exec("update orders set edc_id=? where id = ?", [$id, $row_id]);
-    $txn->commit();
+
+    if (WRITE) {
+        $txn->commit();
+    }
 }
