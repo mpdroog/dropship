@@ -39,9 +39,6 @@ foreach ($res["orders"] as $order) {
     if (VERBOSE) var_dump($details);
 
     $ship = $details["customerDetails"]["shipmentDetails"];
-    if (isset($ship["houseNumberExtended"])) {
-        $ship["houseNumber"] .= " " . $ship["houseNumberExtended"];
-    }
     $prods = $details["orderItems"];
 
     $xprods = [];
@@ -54,7 +51,7 @@ foreach ($res["orders"] as $order) {
     }
     $xprods = implode("\n", $xprods);
 
-    $txn = $db->txn();
+    $txn = $orderdb->txn();
     $row_id = $orderdb->insert("orders", [
         "bol_id" => $order["orderId"],
         "edc_id" => null
@@ -71,6 +68,7 @@ foreach ($res["orders"] as $order) {
         <extra_email>' . $ship["email"] .'</extra_email>
 	<street>' . $ship["streetName"] . '</street>
 	<house_nr>' . $ship["houseNumber"] . '</house_nr>
+	<house_nr_ext>' . $ship["houseNumberExtended"] . '</house_nr_ext>
 	<postalcode>' . $ship["zipCode"] . '</postalcode>
 	<city>' . $ship["city"] . '</city>
 	<country>' . $countries[ $ship["countryCode"] ] . '</country>
@@ -82,6 +80,9 @@ foreach ($res["orders"] as $order) {
     if (VERBOSE) var_dump($xml);
 
     $id = edc_order($xml);
+    if (! is_numeric($id)) {
+        user_error("edc_order did not return valid id.");
+    }
     echo sprintf("Bol id=%s edc=%s\n", $order["orderId"], $id);
     $orderdb->exec("update orders set edc_id=? where id = ?", [$id, $row_id]);
     $txn->commit();
