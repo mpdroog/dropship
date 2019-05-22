@@ -199,8 +199,14 @@ while($xml->name == 'product')
             $price = bcadd($price, "1", 5);    // bol standard costs
             // $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
             $bol_price = round($price, 2);
+            $bol_price = number_format($bol_price, 2, ".", "");
 
-	$last_update = $db->getCell("SELECT time_updated from prods WHERE id=?", [$variant["id"]]);
+        $cur = $db->getRow("SELECT time_updated, calc_price_bol from prods WHERE id=?", [$variant["id"]]);
+        $last_price = $cur["calc_price_bol"] ?? null;
+        if ($last_price !== null) {
+            $last_price = number_format(str_replace(",", "", $last_price), 2, ".", "");
+        }
+	$last_update = $cur["time_updated"] ?? false;
 	if ($last_update === false) {
             if (VERBOSE) echo sprintf("Add %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
 	    $db->insert("prods", [
@@ -223,7 +229,8 @@ while($xml->name == 'product')
                 "calc_price_bol" => $bol_price
             ]);
 	    $add++;
-        } else if ($last_update < $prod["modifydate"]) {
+        } else if ($last_update < $prod["modifydate"] || $last_price !== $bol_price) {
+var_dump($last_price, $bol_price);
             if (VERBOSE) echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
                 "title" => $prod["title"] . " " . $variant["title"],
