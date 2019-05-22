@@ -59,8 +59,8 @@ foreach ($lines as $line) {
 
 // Prod discounts
 $brands = [];
-foreach ($db->getAll("select id from brands") as $brand) {
-    $brands[ $brand["id"] ] = 1;
+foreach ($db->getAll("select id, discount from brands") as $brand) {
+    $brands[ $brand["id"] ] = $brand["discount"];
 }
 $lines = explode("\n", file_get_contents(__DIR__ .  "/edc_discount.csv"));
 array_shift($lines);
@@ -70,12 +70,20 @@ foreach ($lines as $line) {
     // brandid;brandname;discount
     // 171;Abierta Fina;10
     $tok = explode(";", $line);
-    if (isset($brands[$tok[0]])) continue;
-    $db->insert("brands", [
-        "id" => $tok[0],
-        "name" => $tok[1],
-        "discount" => $tok[2]
-    ]);
+    if (! isset($brands[$tok[0]])) {
+        $db->insert("brands", [
+            "id" => $tok[0],
+            "name" => $tok[1],
+            "discount" => $tok[2]
+        ]);
+    } else if ($brands[$tok[0]] !== $tok[2]) {
+        echo sprintf("discount %s (%s=>%s)\n", $tok[1], $brands[$tok[0]], $tok[2]);
+        $db->update("brands", [
+            "discount" => $tok[2]
+        ], [
+            "id" => $tok[0]
+        ]);
+    }
 }
 
 // Products
