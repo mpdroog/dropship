@@ -111,6 +111,7 @@ $ignore = 0;
 $nochange = 0;
 $error = 0;
 $filtern = 0;
+$read_ids = [];
 while($xml->name == 'product')
 {
 	$prod = xml($xml->readOuterXML());
@@ -171,6 +172,7 @@ while($xml->name == 'product')
 	}
 
 	foreach ($variants as $variant) {
+            $read_ids[] = $variant["id"];
             if (! isset($variant["title"])) $variant["title"] = "";
             if (is_array($variant["ean"])) $variant["ean"] = trim(implode(" ", $variant["ean"]));
             if (strlen($variant["ean"]) === 0) {
@@ -268,6 +270,16 @@ var_dump($last_price, $bol_price);
 	$xml->next('product');
 	unset($element);
 }
+
+// Check if we need to mark anything as deleted
+$del = 0;
+$missed = $db->getAll(sprintf("select bol_id, ean, title from prods where id not in (%s)", implode(",", $read_ids)));
+foreach ($missed as $miss) {
+    $db->insert("bol_del", ["bol_id" => $miss["bol_id"], "tm_added" => time()]);
+    $db->delete("prods", ["id" => $miss["id"]]);
+    $del++;
+}
+
 $txn->commit();
 $db->close();
 $xml->close();
@@ -277,6 +289,7 @@ if (VERBOSE) {
     print "Add=$add\n";
     print "Update=$update\n";
     print "Nochange=$nochange\n";
+    print "Del=$del\n";
     print "Error=$error\n";
     print "Filter=$filtern\n";
     print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
