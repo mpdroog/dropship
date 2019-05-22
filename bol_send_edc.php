@@ -38,6 +38,7 @@ foreach ($res["orders"] as $order) {
     if (VERBOSE) var_dump($details);
 
     $ship = $details["customerDetails"]["shipmentDetails"];
+    $ship["houseNumberExtended"] = $ship["houseNumberExtended"] ?? "";
     $prods = $details["orderItems"];
 
     $xprods = [];
