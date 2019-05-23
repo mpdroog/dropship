@@ -48,15 +48,19 @@ foreach ($lines as $line) {
 
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
-        echo sprintf("WARN: EAN(%s) not found in local sqlite\n", $ean);
-        if (isset($dels[$offerid])) continue; // already set to del in future
-        $db->insert("bol_del", [
+        echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
+        if (isset($dels[$offerid])) {
+            echo sprintf(" offerid(%s) already stored.\n", $offerid);
+            continue; // already set to del in future
+        }
+        $id = $db->insert("bol_del", [
             "bol_id" => $offerid,
             "tm_added" => $now,
             "tm_synced" => null
         ], [
             "tm_added" => time()
         ]);
+        echo sprintf(" added to bol_del(id=%s).\n", $id);
         continue;
     }
 
