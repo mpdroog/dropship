@@ -240,7 +240,6 @@ while($xml->name == 'product')
             ]);
 	    $add++;
         } else if ($last_update < $prod["modifydate"] || $last_price !== $bol_price) {
-var_dump($last_price, $bol_price);
             if (VERBOSE) echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
                 "title" => $prod["title"] . " " . $variant["title"],
@@ -273,7 +272,7 @@ var_dump($last_price, $bol_price);
 
 // Check if we need to mark anything as deleted
 $del = 0;
-$missed = $db->getAll(sprintf("select bol_id, ean, title from prods where id not in (%s)", implode(",", $read_ids)));
+$missed = $db->getAll(sprintf("select id, bol_id, ean, title from prods where id not in (%s)", implode(",", $read_ids)));
 foreach ($missed as $miss) {
     $db->insert("bol_del", ["bol_id" => $miss["bol_id"], "tm_added" => time()]);
     $db->delete("prods", ["id" => $miss["id"]]);
