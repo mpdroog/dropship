@@ -108,12 +108,23 @@ while($xml->name == 'product') {
       $out = "";
       $ret = 1;
       // jpg to webp with highest compression
+      ob_start();
       exec(sprintf("cwebp -quiet -m 6 -q 80 %s -o %s", escapeshellarg("$f.jpg"), escapeshellarg("$f.webp")), $out, $ret);
+      ob_get_clean();
       if ($ret !== 0) {
-        var_dump($out);
-        var_dump($ret);
-        user_error("exec(cwebp failed)");
+        $i = new Imagick("$f.jpg");
+        $i->setImageColorspace(Imagick::COLORSPACE_SRGB);
+        $i->writeImage("$f.jpg");
+        $i->destroy();
+
+        exec(sprintf("cwebp -quiet -m 6 -q 80 %s -o %s", escapeshellarg("$f.jpg"), escapeshellarg("$f.webp")), $out, $ret);
+        if ($ret !== 0) {
+          var_dump($out);
+          var_dump($ret);
+          user_error("exec(cwebp failed)");
+        }
       }
+
     } else {
       if ($webp === false) {
         var_dump($f);
