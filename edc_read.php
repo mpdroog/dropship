@@ -6,47 +6,12 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/filter.php";
 
 function xml($res) {
     $xml = new SimpleXMLElement($res);
     return json_decode(json_encode($xml), true);
 }
-
-$filters = ["lingerie",
-"jurk",
-"jarretel",
-"suit",
-"kous",
-"onderbroek",
-"tuig",
-"body",
-"handboei",
-"panty",
-"body",
-"masker",
-"gag",
-"kleding",
-"sloffen",
-"gordel",
-"batterij",
-"masker",
-"beha",
-"handschoen",
-"haak",
-"pantoffel",
-"dwangbuis",
-//"kuis",
-//"kooi",
-//"ballon",
-"halsband",
-"riem",
-" bra",
-"harnas",
-"slip",
-"bh",
-//"strap-on",
-"s/"
-];
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 $lines = explode(";", file_get_contents(__DIR__ . "/default.sql"));
@@ -125,16 +90,12 @@ while($xml->name == 'product')
 	}
         if (is_array($prod["description"])) $prod["description"] = implode(" ", $prod["description"]);
 
-        // Filter
-        $title = strtolower($prod["title"]);
-        foreach ($filters as $filter) {
-                if (strpos($title, $filter) !== false) {
-                    if (VERBOSE) echo sprintf("Ignore (title.filter for %s) %s\n", $filter, $prod["title"]);
-                    $filtern++;
-                    $xml->next('product');
-                    unset($element);
-                    continue 2;
-                }
+        if (filter_ignore($prod["title"])) {
+            if (VERBOSE) echo sprintf("Ignore %s\n", $prod["title"]);
+            $filtern++;
+            $xml->next('product');
+            unset($element);
+            continue;
         }
 
         $catgroups = $prod["categories"]["category"];

@@ -5,6 +5,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/filter.php";
 
 // Utils
 // https://stackoverflow.com/questions/2955251/php-function-to-make-slug-url-string
@@ -32,47 +33,13 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
-$filters = ["lingerie",
-"jurk",
-"jarretel",
-"suit",
-"kous",
-"onderbroek",
-"tuig",
-"body",
-"handboei",
-"panty",
-"body",
-"masker",
-"gag",
-"kleding",
-"sloffen",
-"gordel",
-"batterij",
-"masker",
-"beha",
-"handschoen",
-"haak",
-"pantoffel",
-"dwangbuis",
-//"kuis",
-//"kooi",
-//"ballon",
-"halsband",
-"riem",
-" bra",
-"harnas",
-"slip",
-"bh",
-//"strap-on",
-"s/"
-];
 define("IMGDIR", "/var/www/mijnpoesje.nl/pub/assets");
 if (! file_exists(IMGDIR)) {
   if (! mkdir(IMGDIR)) {
     user_error(sprintf("mkdir(%s) failed", IMGDIR));
   }
 }
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
 $xml = new XMLReader();
 if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
@@ -87,6 +54,12 @@ define("EDC_URL", "http://cdn.edc.nl/500/%s");
 while($xml->name == 'product') {
   $prod = xml($xml->readOuterXML());
   if (VERBOSE) echo $prod["title"] . "\n";
+  if (filter_ignore($prod["title"])) {
+    if (VERBOSE) echo sprintf("Ignore %s\n", $prod["title"]);
+    $xml->next('product');
+    unset($element);
+    continue;
+  }
 
   $imgs = $prod["pics"]["pic"];
   if (! is_array($imgs)) {
@@ -95,12 +68,35 @@ while($xml->name == 'product') {
   if (count($imgs) === 0) {
     user_error("No image for asset?");
   }
+
+  // Map in DB
+  {
+    $variants = $prod["variants"]["variant"];
+    if (isset($variants["id"])) {
+      // hack. convert to array to generalize struct
+      $variants = [$variants];
+    }
+    foreach ($variants as $variant) {
+      // TODO: perf?
+      if ("1" === $db->getCell("select 1 from prod_img where ean = ?", [$variant["ean"]])) continue;
+      $db->insert("prod_img", ["ean" => $variant["ean"], "count" => count($imgs)]);
+    }
+  }
+
+  $brandTitle = slugify($prod["brand"]["title"]);
+  if (! file_exists(IMGDIR . "/$brandTitle")) {
+    if (! mkdir(IMGDIR . "/$brandTitle")) {
+      user_error("mkdir brand fail");
+    }
+  }
   foreach ($imgs as $idx => $pic) {
-    if ($idx !== 0) {
+    if ($idx === 0) {
+      $idx = 1;
+    } else {
       $idx = explode("_", $pic)[1];
       $idx = str_replace(".jpg", "", $idx);
     }
-    $f = IMGDIR . "/" . slugify($prod["title"]) . "_" . $idx;
+    $f = IMGDIR . "/$brandTitle/" . slugify($prod["title"]) . "_" . $idx;
     $webp = file_exists("$f.webp");
     if (! file_exists("$f.jpg")) {
       if (VERBOSE) echo sprintf("Download " . EDC_URL . "\n", $pic);
@@ -124,6 +120,7 @@ while($xml->name == 'product') {
           user_error("exec(cwebp failed)");
         }
       }
+      //echo sprintf("WARN: JPG(CMYK/RGB) file=%s.jpg\n", $f);
 
     } else {
       if ($webp === false) {

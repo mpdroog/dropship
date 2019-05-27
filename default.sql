@@ -103,5 +103,14 @@ ON "bol_del" (
   "bol_id"
 );
 
+CREATE TABLE IF NOT EXISTS prod_img (
+  "ean" TEXT NOT NULL PRIMARY KEY,
+  "count" INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_prodimg"
+ON "prod_img" (
+  "ean"
+);
+
 PRAGMA foreign_keys = true;
 
