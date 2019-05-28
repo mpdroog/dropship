@@ -11,7 +11,11 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 $now = time();
 $del = 0;
 // 0.Del prods in bol_del where tm_synced is null
-foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
+foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) {
+    if ($prod["bol_id"] === null) {
+        var_dump($prod);
+        user_error("bol_id is null.");
+    }
     list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
     if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
         var_dump($res);
