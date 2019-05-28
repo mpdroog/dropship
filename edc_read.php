@@ -235,7 +235,10 @@ while($xml->name == 'product')
 $del = 0;
 $missed = $db->getAll(sprintf("select id, bol_id, ean, title from prods where id not in (%s)", implode(",", $read_ids)));
 foreach ($missed as $miss) {
-    $db->insert("bol_del", ["bol_id" => $miss["bol_id"], "tm_added" => time()]);
+    if ($miss["bol_id"] !== null) {
+        // Only request to delete when stored in Bol
+        $db->insert("bol_del", ["bol_id" => $miss["bol_id"], "tm_added" => time()]);
+    }
     $db->delete("prods", ["id" => $miss["id"]]);
     $del++;
 }
