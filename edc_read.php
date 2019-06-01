@@ -232,10 +232,11 @@ while($xml->name == 'product')
 }
 
 // Check if we need to mark anything as deleted
+$already = $db->getCol("select bol_id from bol_del");
 $del = 0;
 $missed = $db->getAll(sprintf("select id, bol_id, ean, title from prods where id not in (%s)", implode(",", $read_ids)));
 foreach ($missed as $miss) {
-    if ($miss["bol_id"] !== null) {
+    if ($miss["bol_id"] !== null && !in_array($miss["bol_id"], $already)) {
         // Only request to delete when stored in Bol
         $db->insert("bol_del", ["bol_id" => $miss["bol_id"], "tm_added" => time()]);
     }
