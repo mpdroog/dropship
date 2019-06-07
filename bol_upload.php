@@ -73,7 +73,7 @@ foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, st
 // 2.Sync prods that have a different stock amount or price compared to bol
 // TODO: Horrible complex SQL-logic
 
-$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_error is null");
+$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null");
 $update = 0;
 foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
