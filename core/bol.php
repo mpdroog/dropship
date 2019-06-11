@@ -13,6 +13,9 @@ function bol_bearer() {
     curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
 
     $res = curl_exec($session);
+    if ($res === false) {
+        user_error("bol_bearer e=" . curl_error($session));
+    }
     curl_close($session);
     $j = json_decode($res, true);
     if (! is_array($j)) {
