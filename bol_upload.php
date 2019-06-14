@@ -19,7 +19,11 @@ foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) 
     list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
     if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
         var_dump($res);
-        user_error("DELETE offer err.");
+        if (isset($res["violations"]) && $res["violations"][0]["name"] === "offer-id") {
+            echo "WARN: Skip invalid offerid.\n";
+        } else {
+            user_error("DELETE offer err.");
+        }
     }
     $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
     if (VERBOSE) echo sprintf("bol_del %s\n", $prod["bol_id"]);
