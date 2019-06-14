@@ -50,7 +50,7 @@ foreach ($lines as $line) {
         $nomatch++;
         echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
         if (isset($dels[$offerid])) {
-            echo sprintf(" offerid(%s) already stored.\n", $offerid);
+            echo sprintf(" offerid(%s) already stored (bol_upload not working?).\n", $offerid);
             continue; // already set to del in future
         }
         $id = $db->insert("bol_del", [
