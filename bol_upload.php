@@ -98,6 +98,7 @@ foreach ($prods as $prod) {
         if ($head["status"] !== 202) {
             $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
             var_dump($res);
+            ratelimit($head);
             continue;
         }
         ratelimit($head);
