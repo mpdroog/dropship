@@ -2,6 +2,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
+require __DIR__ . "/filter.php";
 const CSV_HEAD = "2da3306a0eb73cdf28087d3b2ef17dd8";
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 
@@ -11,6 +12,10 @@ $lookup = [];
 foreach ($db->getAll("select ean, bol_id, bol_updated, stock from prods") as $prod) {
     if (isset($lookup[ $prod["ean"] ])) {
         user_error("assumption fail. double EAN");
+    }
+    if (filter_ean($prod["ean"])) {
+        if (VERBOSE) echo sprintf("filter_ean(%s)\n", $prod["ean"]);
+        continue;
     }
     $lookup[ $prod["ean"] ] = $prod;
 }

@@ -54,3 +54,10 @@ function filter_ignore($title) {
     return false;
 }
 
+$eans = [
+    "8709641004775" => true
+];
+function filter_ean($ean) {
+    global $eans;
+    return isset($eans[$ean]);
+}
