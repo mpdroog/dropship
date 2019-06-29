@@ -178,12 +178,15 @@ while($xml->name == 'product')
             $last_price = number_format(str_replace(",", "", $last_price), 2, ".", "");
         }
 	$last_update = $cur["time_updated"] ?? false;
+        $title = $prod["title"] . " " . $variant["title"];
+
 	if ($last_update === false) {
-            if (VERBOSE) echo sprintf("Add %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            if (VERBOSE) echo sprintf("Add %s %s\n", $variant["ean"], $title);
 	    $db->insert("prods", [
 		"id" => $variant["id"],
 		"prod_id" => $prod["id"],
-		"title" => $prod["title"] . " " . $variant["title"],
+                "slug" => slugify($variant["id"] . " " . $title),
+		"title" => $title,
 		"description" => $prod["description"],
 		"ean" => $variant["ean"],
 		//"stock" => $variant["stockestimate"],
@@ -203,7 +206,7 @@ while($xml->name == 'product')
         } else if ($last_update < $prod["modifydate"] || $last_price !== $bol_price) {
             if (VERBOSE) echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
-                "title" => $prod["title"] . " " . $variant["title"],
+                //"title" => $prod["title"] . " " . $variant["title"],
                 "description" => $prod["description"],
                 "ean" => $variant["ean"],
                 //"stock" => $variant["stockestimate"],

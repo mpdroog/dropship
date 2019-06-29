@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS brands (
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS prods (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "slug" TEXT NOT NULL,
   "title" TEXT NOT NULL,
   "description" TEXT NOT NULL,
   "ean" TEXT NOT NULL,
@@ -79,6 +80,10 @@ ON "prods" (
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol"
 ON "prods" (
   "bol_id" ASC
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_prodslug"
+ON "prods" (
+  "slug" ASC
 );
 
 CREATE TABLE IF NOT EXISTS cats (
