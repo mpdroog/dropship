@@ -6,7 +6,9 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/core/strings.php";
 require __DIR__ . "/filter.php";
+use core\Strings;
 
 function xml($res) {
     $xml = new SimpleXMLElement($res);
@@ -39,6 +41,7 @@ foreach ($lines as $line) {
     if (! isset($brands[$tok[0]])) {
         $db->insert("brands", [
             "id" => $tok[0],
+            "slug" => Strings::slugify($tok[1]),
             "name" => $tok[1],
             "discount" => $tok[2]
         ]);
@@ -122,7 +125,7 @@ while($xml->name == 'product')
                 }
 
                 if (isset($catDone[$cat["id"]])) continue;
-                $db->exec("INSERT OR IGNORE INTO cats (id, title) VALUES(?, ?)", [$cat["id"], $cat["title"]]);
+                $db->exec("INSERT OR IGNORE INTO cats (id, title, slug) VALUES(?, ?, ?)", [$cat["id"], $cat["title"], Strings::slugify($cat["title"])]);
                 $catDone[$cat["id"]] = true;
             }
         }
@@ -186,7 +189,7 @@ while($xml->name == 'product')
 	    $db->insert("prods", [
 		"id" => $variant["id"],
 		"prod_id" => $prod["id"],
-                "slug" => slugify($variant["id"] . " " . $title),
+                "slug" => Strings::slugify($variant["id"] . " " . $title),
 		"title" => $title,
 		"description" => $prod["description"],
 		"ean" => $variant["ean"],

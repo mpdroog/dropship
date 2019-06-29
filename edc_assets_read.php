@@ -5,7 +5,9 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/core/strings.php";
 require __DIR__ . "/filter.php";
+use core\Strings;
 
 // Utils
 function xml($res) {
@@ -63,7 +65,7 @@ while($xml->name == 'product') {
     }
   }
 
-  $brandTitle = slugify($prod["brand"]["title"]);
+  $brandTitle = Strings::slugify($prod["brand"]["title"]);
   if (! file_exists(IMGDIR . "/$brandTitle")) {
     if (! mkdir(IMGDIR . "/$brandTitle")) {
       user_error("mkdir brand fail");
@@ -76,7 +78,7 @@ while($xml->name == 'product') {
       $idx = explode("_", $pic)[1];
       $idx = str_replace(".jpg", "", $idx);
     }
-    $f = IMGDIR . "/$brandTitle/" . slugify($prod["title"]) . "_" . $idx;
+    $f = IMGDIR . "/$brandTitle/" . Strings::slugify($prod["title"]) . "_" . $idx;
     $webp = file_exists("$f.webp");
     if (! file_exists("$f.jpg")) {
       if (VERBOSE) echo sprintf("Download " . EDC_URL . "\n", $pic);

@@ -17,6 +17,7 @@ PRAGMA foreign_keys = false;
 
 CREATE TABLE IF NOT EXISTS brands (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "slug" text not null,
   "name" TEXT NOT NULL,
   "discount" INTEGER NOT NULL
 );
@@ -88,6 +89,7 @@ ON "prods" (
 
 CREATE TABLE IF NOT EXISTS cats (
   "id" INTEGER NOT NULL,
+  "slug" text not null,
   "title" TEXT NOT NULL,
   PRIMARY KEY ("id")
 );
@@ -95,6 +97,10 @@ CREATE TABLE IF NOT EXISTS cats (
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_cat"
 ON "cats" (
   "title"
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_cat_slug"
+ON "cats" (
+  "slug"
 );
 
 CREATE TABLE IF NOT EXISTS bol_del (
