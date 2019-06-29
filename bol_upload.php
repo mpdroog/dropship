@@ -34,9 +34,11 @@ foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) 
 $added = 0;
 // 1.Sync prods not in Bol
 foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
-    if (VERBOSE) echo sprintf("bol_add %s\n", $prod["ean"]);
+    if (in_array($prod["stock"], [null])) die("ERR: Stock amount empty!");
     if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
     $price = $prod["calc_price_bol"];
+    if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s\n", $prod["ean"], $prod["stock"]);
+
     list($res, $head) = bol_http("POST", "/offers", [
         "ean" => $prod["ean"],
         "condition" => [
