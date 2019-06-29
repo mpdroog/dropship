@@ -6,7 +6,7 @@ require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/bol.php";
 
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 $now = time();
 $del = 0;

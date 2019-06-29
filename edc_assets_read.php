@@ -19,10 +19,10 @@ if (! file_exists(IMGDIR)) {
     user_error(sprintf("mkdir(%s) failed", IMGDIR));
   }
 }
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 $xml = new XMLReader();
-if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
+if (! $xml->open('zip://' . CACHE . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
     user_error("ERR: Failed opening edc_prods.zip");
 }
 while($xml->read() && $xml->name != 'product')

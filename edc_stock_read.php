@@ -12,10 +12,10 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$modified = date("Y-m-d H:i:s", filemtime(__DIR__ . "/edc_stock.xml"));
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
+$modified = date("Y-m-d H:i:s", filemtime(CACHE . "/edc_stock.xml"));
 $xml = new XMLReader();
-if (! $xml->open(__DIR__ . "/edc_stock.xml")) {
+if (! $xml->open(CACHE . "/edc_stock.xml")) {
     user_error("ERR: Failed opening edc_stock.xml");
 }
 

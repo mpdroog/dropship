@@ -16,7 +16,7 @@ if (count($_SERVER["argv"]) > 2) {
     exit("ERR: argument should be ean");
 }
 
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 $now = time();
 $del = 0;

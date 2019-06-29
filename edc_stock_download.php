@@ -5,7 +5,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/edc.php";
 
-$fname = __DIR__ . "/edc_stock.xml";
+$fname = CACHE . "/edc_stock.xml";
 $fd = fopen($fname, "w");
 list($headers, $res) = edc_zip(EDC_URL_STOCK, $fd);
 fclose($fd);

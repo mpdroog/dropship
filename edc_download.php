@@ -5,7 +5,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/edc.php";
 
-$fname = __DIR__ . "/edc_prods.zip";
+$fname = CACHE . "/edc_prods.zip";
 $fd = fopen($fname, "w");
 list($headers, $res) = edc_zip(EDC_URL_PRODS, $fd);
 fclose($fd);

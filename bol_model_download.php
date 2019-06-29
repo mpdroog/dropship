@@ -17,7 +17,7 @@ if (count($_SERVER["argv"]) > 2) {
 }
 
 // https://mailing.bol.com/content/Datamodel.xml
-$fname = __DIR__ . "/bol_datamodel.xml";
+$fname = CACHE . "/bol_datamodel.xml";
 $fd = fopen($fname, "w");
 $res = bol_zip("GET", "https://mailing.bol.com/content/Datamodel.xml", $fd);
 if (VERBOSE) var_dump($res);

@@ -10,8 +10,8 @@ require __DIR__ . "/core/edc.php";
 
 // Package
 const PACKING_ID = 3880;
-$db = new \core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$orderdb = new \core\Db(sprintf("sqlite:%s/orders.sqlite", __DIR__), "", "");
+$db = new \core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
+$orderdb = new \core\Db(sprintf("sqlite:%s/orders.sqlite", CACHE), "", "");
 $countries = [
     "NL" => "1",
     "BE" => "2"
@@ -78,6 +78,10 @@ foreach ($res["orders"] as $order) {
     <products>' . $xprods . '</products>
     </orderdetails>';
     if (VERBOSE) var_dump($xml);
+    if ($ship["zipCode"] === "3600" && strtolower($ship["city"]) === "genk") {
+        echo "WARN: Kathleen David order IGNORED\n";
+        exit(1);
+    }
 
     $id = "TEST001";
     if (WRITE) {

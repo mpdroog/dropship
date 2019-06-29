@@ -31,3 +31,4 @@ function report($errno, $errstr, $errfile, $errline) {
 $options = getopt("v::w::");
 define("VERBOSE", isset($options["v"]));
 define("WRITE", isset($options["w"])); // new
+define("CACHE", __DIR__ . "/../cache");

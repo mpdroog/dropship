@@ -13,7 +13,8 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+if (VERBOSE) echo sprintf("sqlite:%s/db.sqlite\n", CACHE);
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 $lines = explode(";", file_get_contents(__DIR__ . "/default.sql"));
 foreach ($lines as $line) {
     if (strlen(trim($line)) === 0) continue;
@@ -27,7 +28,7 @@ $brands = [];
 foreach ($db->getAll("select id, discount from brands") as $brand) {
     $brands[ $brand["id"] ] = $brand["discount"];
 }
-$lines = explode("\n", file_get_contents(__DIR__ .  "/edc_discount.csv"));
+$lines = explode("\n", file_get_contents(CACHE .  "/edc_discount.csv"));
 array_shift($lines);
 foreach ($lines as $line) {
     $line = trim($line);
@@ -53,7 +54,7 @@ foreach ($lines as $line) {
 
 // Products
 $xml = new XMLReader();
-if (! $xml->open('zip://' . __DIR__ . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
+if (! $xml->open('zip://' . CACHE . "/edc_prods.zip#eg_xml_feed_2015_nl.xml")) {
     user_error("ERR: Failed opening edc_prods.zip");
 }
 

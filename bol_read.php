@@ -4,7 +4,7 @@ require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/filter.php";
 const CSV_HEAD = "2da3306a0eb73cdf28087d3b2ef17dd8";
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 // Convert current sqlite-db to hashmap for rapid lookups
 // TODO: Something more memory friendly?
@@ -26,7 +26,7 @@ foreach ($db->getAll("select bol_id from bol_del") as $prod) {
 }
 
 // TODO: Abusing memory here..
-$lines = explode("\n", file_get_contents(__DIR__ . "/bol_offers.csv"));
+$lines = explode("\n", file_get_contents(CACHE . "/bol_offers.csv"));
 $head = array_shift($lines);
 if (CSV_HEAD !== md5($head)) {
     echo "md5.old=" . CSV_HEAD;

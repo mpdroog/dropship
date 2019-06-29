@@ -50,7 +50,7 @@ while (true) {
     $res = null; // force next get
 }
 
-$fname = __DIR__ . "/bol_offers.csv";
+$fname = CACHE . "/bol_offers.csv";
 $fd = fopen($fname, "w");
 $res = bol_zip("GET", API_URL."/offers/export/$uuid", $fd);
 if (VERBOSE) var_dump($res);
