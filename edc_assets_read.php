@@ -15,7 +15,7 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
-define("IMGDIR", "/var/www/mijnpoesje.nl/pub/assets");
+define("IMGDIR", "/var/www/a.mijnpoesje.nl/pub");
 if (! file_exists(IMGDIR)) {
   if (! mkdir(IMGDIR)) {
     user_error(sprintf("mkdir(%s) failed", IMGDIR));
