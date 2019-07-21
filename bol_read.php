@@ -3,7 +3,6 @@ require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/filter.php";
-const CSV_HEAD = "2da3306a0eb73cdf28087d3b2ef17dd8";
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 // Convert current sqlite-db to hashmap for rapid lookups
@@ -28,10 +27,23 @@ foreach ($db->getAll("select bol_id from bol_del") as $prod) {
 // TODO: Abusing memory here..
 $lines = explode("\n", file_get_contents(CACHE . "/bol_offers.csv"));
 $head = array_shift($lines);
-if (CSV_HEAD !== md5($head)) {
-    echo "md5.old=" . CSV_HEAD;
-    echo "md5.new=" . md5($head);
-    exit("ERR: CSV-header mismatching with dev header, head=$head\n");
+
+$pos_offer = null;
+$pos_ean = null;
+$pos_updated = null;
+$pos_stock = null;
+$pos_price = null;
+foreach (explode(",", $head) as $i => $name) {
+  if ($name === "offerId") $pos_offer = $i;
+  if ($name === "ean") $pos_ean = $i;
+  if ($name === "mutationDateTime") $pos_updated = $i;
+  if ($name === "stockAmount") $pos_stock = $i;
+  if ($name === "bundlePricesPrice") $pos_price = $i;
+}
+// var_dump($pos_offer, $pos_ean, $pos_updated, $pos_stock, $pos_price);
+if ($pos_offer === null || $pos_ean === null || $pos_updated === null || $pos_stock === null || $pos_price === null) {
+  echo "ERR: One of pos-args from CSV top missing.";
+  exit(1);
 }
 
 $nomatch = 0;
@@ -45,11 +57,11 @@ foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
 
-    $offerid = $tok[0];
-    $ean = $tok[1];
-    $updated = $tok[10];
-    $stock = $tok[7];
-    $price = $tok[5];
+    $offerid = $tok[$pos_offer];
+    $ean = $tok[$pos_ean];
+    $updated = $tok[$pos_updated];
+    $stock = $tok[$pos_stock];
+    $price = $tok[$pos_price];
 
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
