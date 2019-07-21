@@ -193,14 +193,14 @@ while($xml->name == 'product')
 		"title" => $title,
 		"description" => $prod["description"],
 		"ean" => $variant["ean"],
-		//"stock" => $variant["stockestimate"],
+		"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
                 "vat" => $prod["price"]["vatnl"],
                 "brand_id" => $prod["brand"]["id"],
                 "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
 		"time_updated" => $prod["modifydate"],
-                "cats" => implode(",", $catids),
+                "cats" => "," . implode(",", $catids) . ",",
                 "bol_pending" => null, // ready for diff+sync
                 "edc_artnum" => $variant["subartnr"],
                 "calc_price_site" => $site_price,
@@ -220,15 +220,15 @@ while($xml->name == 'product')
                 "brand_id" => $prod["brand"]["id"],
                 "discount" => $prod["price"]["discount"] === 'Y' ? 1 : 0,
                 "time_updated" => $prod["modifydate"],
-                "cats" => implode(",", $catids),
-                "bol_pending" => null, // reeady for diff+sync
+                //"cats" => implode(",", $catids),
+                "bol_pending" => null, // ready for diff+sync
                 "edc_artnum" => $variant["subartnr"],
                 "calc_price_site" => $site_price,
                 "calc_price_bol" => $bol_price
             ], ["id" => $variant["id"]], null);
             $update++;
 	} else {
-            if (VERBOSE) echo sprintf("Nochange %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            if (VERBOSE) echo sprintf("Nochange %s %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"], $variant["id"]);
             $nochange++;
 	}
 
