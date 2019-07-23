@@ -7,16 +7,24 @@ require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/strings.php";
 
-// curl -i -X POST --data "$(cat edc_discount.cmd)" "http://192.168.178.36:8022/v1/script.cmd"
 $ch = curl_init();
-
-curl_setopt($ch, CURLOPT_URL,"http://192.168.178.36:8022/v1/script.cmd");
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_discount.cmd"));
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+if ($ch === false) {
+    user_error('curl_init fail');
+}
+$ok = 1;
+$ok &= curl_setopt($ch, CURLOPT_URL,"http://192.168.178.36:8022/v1/script.cmd");
+$ok &= curl_setopt($ch, CURLOPT_POST, 1);
+$ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_discount.cmd"));
+$ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+if ($ok !== 1) {
+    user_error("curl_setopt fail");
+}
 
 $res = curl_exec($ch);
 curl_close($ch);
+if ($res === false) {
+    user_error("curl_exec fail");
+}
 
 $lines = explode("\n", trim($res));
 if (VERBOSE) echo sprintf("line.count=%d\n", count($lines));
@@ -24,6 +32,7 @@ if (count($lines) <= 1) {
     var_dump($res);
     user_error("res invalid");
 }
+
 $sep = null;
 foreach ($lines as $idx => $line) {
     if (VERBOSE) echo sprintf("line.parse=%s\n", $line);
