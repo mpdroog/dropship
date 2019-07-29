@@ -18,14 +18,20 @@ $ok &= curl_setopt($ch, CURLOPT_URL,"http://192.168.178.36:8022/v1/script.cmd");
 $ok &= curl_setopt($ch, CURLOPT_POST, 1);
 $ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_prepaid.cmd"));
 $ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$ok &= curl_setopt($ch, CURLOPT_USERPWD, "rootdevnl" . ":" . "77UJ/xbap/lfwkhWqoCn3QW/lcBq46oXinL9UreLchU");  
+
 if ($ok !== 1) {
     user_error("curl_setopt fail");
 }
 
 $res = curl_exec($ch);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 if ($res === false) {
     user_error("curl_exec fail");
+}
+if ($code !== 200) {
+    user_error("curl_http($code) res=$res");
 }
 
 // ugly HTML parser here
