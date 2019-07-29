@@ -35,14 +35,16 @@ while (true) {
     if ($res === null) {
         list($res, $head) = bol_http("GET", $url, []);
     }
-    if (VERBOSE) echo sprintf("id=%s status=%s\n", $exportid, $res["status"]);
-    if ($res["status"] === "SUCCESS") {
-        $uuid = $res["entityId"];
-        break;
-    }
-    if ($res["status"] !== "PENDING") {
-        var_dump($res);
-        user_error("Unprocessible status=" . $res["status"]);
+    if ($res !== null) {
+        if (VERBOSE) echo sprintf("id=%s status=%s\n", $exportid, $res["status"]);
+        if ($res["status"] === "SUCCESS") {
+            $uuid = $res["entityId"];
+            break;
+        }
+        if ($res["status"] !== "PENDING") {
+            var_dump($res);
+            user_error("Unprocessible status=" . $res["status"]);
+        }
     }
 
     if (VERBOSE) echo "sleep 15sec\n";
