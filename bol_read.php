@@ -2,8 +2,8 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
-const CSV_HEAD = "2da3306a0eb73cdf28087d3b2ef17dd8";
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+require __DIR__ . "/filter.php";
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 // Convert current sqlite-db to hashmap for rapid lookups
 // TODO: Something more memory friendly?
@@ -11,6 +11,10 @@ $lookup = [];
 foreach ($db->getAll("select ean, bol_id, bol_updated, stock from prods") as $prod) {
     if (isset($lookup[ $prod["ean"] ])) {
         user_error("assumption fail. double EAN");
+    }
+    if (filter_ean($prod["ean"])) {
+        if (VERBOSE) echo sprintf("filter_ean(%s)\n", $prod["ean"]);
+        continue;
     }
     $lookup[ $prod["ean"] ] = $prod;
 }
@@ -21,46 +25,59 @@ foreach ($db->getAll("select bol_id from bol_del") as $prod) {
 }
 
 // TODO: Abusing memory here..
-$lines = explode("\n", file_get_contents(__DIR__ . "/bol_offers.csv"));
+$lines = explode("\n", file_get_contents(CACHE . "/bol_offers.csv"));
 $head = array_shift($lines);
-if (CSV_HEAD !== md5($head)) {
-    echo "md5.old=" . CSV_HEAD;
-    echo "md5.new=" . md5($head);
-    exit("ERR: CSV-header mismatching with dev header, head=$head\n");
+
+$pos_offer = null;
+$pos_ean = null;
+$pos_updated = null;
+$pos_stock = null;
+$pos_price = null;
+foreach (explode(",", $head) as $i => $name) {
+  if ($name === "offerId") $pos_offer = $i;
+  if ($name === "ean") $pos_ean = $i;
+  if ($name === "mutationDateTime") $pos_updated = $i;
+  if ($name === "stockAmount") $pos_stock = $i;
+  if ($name === "bundlePricesPrice") $pos_price = $i;
+}
+// var_dump($pos_offer, $pos_ean, $pos_updated, $pos_stock, $pos_price);
+if ($pos_offer === null || $pos_ean === null || $pos_updated === null || $pos_stock === null || $pos_price === null) {
+  echo "ERR: One of pos-args from CSV top missing.";
+  exit(1);
 }
 
 $nomatch = 0;
 $mismatch = 0;
 $nochange = 0;
 $update = 0;
-echo $head;
-
-// offerId,ean,conditionName,conditionCategory,conditionComment,bundlePricesPrice,fulfilmentDeliveryCode,stockAmount,onHoldByRetailer,fulfilmentType,mutationDateTime
 
 $now = time();
 $txn = $db->txn();
 foreach ($lines as $line) {
     if (trim($line) === "") continue;
     $tok = explode(",", $line);
-    var_dump($tok);
 
-    $offerid = $tok[0];
-    $ean = $tok[1];
-    $updated = $tok[10];
-    $stock = $tok[7];
-    $price = $tok[5];
+    $offerid = $tok[$pos_offer];
+    $ean = $tok[$pos_ean];
+    $updated = $tok[$pos_updated];
+    $stock = $tok[$pos_stock];
+    $price = $tok[$pos_price];
 
     if (! isset($lookup[ $ean ])) {
         $nomatch++;
-        echo sprintf("WARN: EAN(%s) not found in local sqlite\n", $ean);
-        if (isset($dels[$offerid])) continue; // already set to del in future
-        $db->insert("bol_del", [
+        echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
+        if (isset($dels[$offerid])) {
+            echo sprintf(" offerid(%s) already stored (bol_upload not working?).\n", $offerid);
+            continue; // already set to del in future
+        }
+        $id = $db->insert("bol_del", [
             "bol_id" => $offerid,
             "tm_added" => $now,
             "tm_synced" => null
         ], [
             "tm_added" => time()
         ]);
+        echo sprintf(" added to bol_del(id=%s).\n", $id);
         continue;
     }
 
@@ -72,7 +89,7 @@ foreach ($lines as $line) {
     }
     if ($l["bol_updated"] !== null && $l["bol_updated"] === $updated) {
         $nochange++;
-        echo sprintf("EAN(%s) no change.\n", $ean);
+        if(VERBOSE) echo sprintf("EAN(%s) no change.\n", $ean);
         continue;
     }
 
@@ -90,11 +107,13 @@ foreach ($lines as $line) {
 $txn->commit();
 $db->close();
 
-print "nomatch=$nomatch\n";
-print "mismatch=$mismatch\n";
-print "Update=$update\n";
-print "Nochange=$nochange\n";
-print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
-print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
-print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
-print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+if (VERBOSE) {
+    print "nomatch=$nomatch\n";
+    print "mismatch=$mismatch\n";
+    print "Update=$update\n";
+    print "Nochange=$nochange\n";
+    print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+    print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+    print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+    print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+}

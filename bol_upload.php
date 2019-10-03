@@ -4,123 +4,42 @@
  */
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
-const API_URL = "https://api.bol.com/retailer";
-const API_CLIENTID = "8338f293-a8a0-4d6c-b660-7d77d76002cb";
-const API_SECRET = "aMPKgg6tsz_5fvRQbNweO4ejCaSdOI_cVb698D5YwfMy1GeAvm94YGeAD1JRjmI_eGKk0s2bRXc59NECLcrKSw";
-const API_USER = "sync";
+require __DIR__ . "/core/bol.php";
 
-function bol_bearer() {
-    $session = curl_init("https://login.bol.com/token?grant_type=client_credentials");
-    curl_setopt($session, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-    curl_setopt($session, CURLOPT_USERPWD, API_CLIENTID . ':' . API_SECRET);
-    curl_setopt($session, CURLOPT_POST, true);
-    curl_setopt($session, CURLOPT_ENCODING, 'UTF-8');
-    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-
-    $res = curl_exec($session);
-    curl_close($session);
-    $j = json_decode($res, true);
-    if (! is_array($j)) {
-        user_error("http_bearer: invalid res=$res");
-    }
-    if ($j["token_type"] !== "Bearer") {
-        user_error("http_bearer: unsupported token type=" . $j["token_type"]);
-    }
-    if ($j["scope"] !== "RETAILER") {
-        var_dump($j);
-        user_error("http_bearer: account does not have retailer role but role=" . $j["scope"]);
-    }
-
-    $exp = $j["expires_in"];
-    return [
-        "expire" => strtotime("+$exp sec"),
-        "bearer" => $j["access_token"]
-    ];
-}
-
-function bol_http($method, $url, $d = []) {
-    global $token;
-    if (! is_array($token) || $token["expire"] < time()) {
-        // Lazy auto-request new token
-        $token = bol_bearer();
-    }
-
-    $bearer = $token["bearer"];
-    $session = curl_init(API_URL . $url);
-    $headers = ['Accept: application/vnd.retailer.v3+json', sprintf('Authorization: Bearer %s', $bearer)];
-    if (count($d) > 0) {
-        curl_setopt($session, CURLOPT_POST, true);
-        curl_setopt($session, CURLOPT_POSTFIELDS, json_encode($d));
-        $headers[] = 'Content-Type: application/vnd.retailer.v3+json';
-    }
-
-    $res_headers = [];
-    curl_setopt($session, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$res_headers) {
-        $len = strlen($header);
-        $header = explode(':', $header, 2);
-        if (count($header) < 2) // ignore invalid headers
-          return $len;
-        $name = strtolower(trim($header[0]));
-        if (!array_key_exists($name, $res_headers))
-          $res_headers[$name] = [trim($header[1])];
-        else
-          $res_headers[$name][] = trim($header[1]);
-        return $len;
-    });
-
-
-    curl_setopt($session, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($session, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($session, CURLOPT_ENCODING, 'UTF-8');
-    curl_setopt($session, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($session, CURLOPT_SSL_VERIFYPEER, false);
-
-    $response = curl_exec($session);
-    $code = curl_getinfo($session, CURLINFO_HTTP_CODE);
-    $res_headers["status"] = $code;
-    curl_close($session);
-    $results = json_decode($response, true);
-    if ($code === "429") {
-        user_error("Error, ratelimit.");
-    }
-    return [$results, $res_headers];
-}
-function ratelimit(array $head) {
-    if (! isset($head["x-ratelimit-remaining"])) {
-        return;
-    }
-    if ($head["x-ratelimit-remaining"][0] === "1") {
-        $retry = intval($head["x-ratelimit-reset"][0]) - time();
-        if ($retry < 10) {
-            $retry = 10;
-        }
-        echo sprintf("[ratelimit] sleep %d sec..", $retry);
-        sleep($retry);
-    }
-}
-
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 $now = time();
 $del = 0;
 // 0.Del prods in bol_del where tm_synced is null
-foreach ($db->getAll("select bol_id from bol_del where tm_synced is null") as $prod) {
+foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) {
+    if ($prod["bol_id"] === null) {
+        var_dump($prod);
+        user_error("bol_id is null.");
+    }
     list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
     if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
         var_dump($res);
-        user_error("DELETE offer err.");
+        if (isset($res["violations"]) && $res["violations"][0]["name"] === "offer-id") {
+            echo "WARN: Skip invalid offerid.\n";
+        } else {
+            user_error("DELETE offer err.");
+        }
     }
     $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
-    echo sprintf("bol_del %s\n", $prod["bol_id"]);
+    if (VERBOSE) echo sprintf("bol_del %s\n", $prod["bol_id"]);
     $del++;
     ratelimit($head);
 }
 
 $added = 0;
 // 1.Sync prods not in Bol
-/*foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
+foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
+    if (in_array($prod["stock"], [null])) die("ERR: Stock amount empty!");
+    if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
     $price = $prod["calc_price_bol"];
-    list($res, $head) = bol_http("POST", "/offers/", [
+    if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s\n", $prod["ean"], $prod["stock"]);
+
+    list($res, $head) = bol_http("POST", "/offers", [
         "ean" => $prod["ean"],
         "condition" => [
             "name" => "NEW"
@@ -153,31 +72,27 @@ $added = 0;
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
-    echo sprintf("bol_add %s\n", $prod["ean"]);
     $added++;
     ratelimit($head);
-}*/
+}
 
 // 2.Sync prods that have a different stock amount or price compared to bol
 // TODO: Horrible complex SQL-logic
-$qstock = "bol_stock < 500 and bol_stock+5 > stock";
-$qprice = "bol_price != calc_price_bol";
 
-$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null and bol_error is null and bol_pending is null and (($qstock) OR ($qprice))");
+$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null");
 $update = 0;
 foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
-    $has_stock = $prod["bol_stock"] !== "0" && $prod["stock"] !== "0";
-    $has_diff = intval($prod["bol_stock"])+5 > intval($prod["stock"]);
-    if ($has_stock && $has_diff) {
-        if (intval($prod["stock"]) >= 1000) {
-            $prod["stock"] = "999"; // limit to 999
-        }
-        // Always lower stock by 5 so we are on the save side
-        $prod["stock"] = bcsub($prod["stock"], "5", 0);
-        if ($prod["stock"] < 0) $prod["stock"] = "0";
 
-        echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
+    // make them comparable
+    if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
+    //$prod["bol_stock"] = intval($prod["bol_stock"])-5;
+    $prod["stock"] = bcsub($prod["stock"], "5", 0);
+    if ($prod["stock"] < 0) $prod["stock"] = "0";
+    if ($prod["bol_stock"] < 0) $prod["bol_stock"] = "0";
+
+    if ($prod["bol_stock"] !== $prod["stock"]) {
+        if (VERBOSE) echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
             "amount" => $prod["stock"],
             "managedByRetailer" => true
@@ -185,6 +100,7 @@ foreach ($prods as $prod) {
         if ($head["status"] !== 202) {
             $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
             var_dump($res);
+            ratelimit($head);
             continue;
         }
         ratelimit($head);
@@ -193,13 +109,16 @@ foreach ($prods as $prod) {
             user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
         }
         $update++;
+    } else {
+        if (VERBOSE) echo sprintf("bol.stock same %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
     }
+
     if ($prod["bol_price"] !== $prod["calc_price_bol"]) {
         $bundle = [[
             "quantity" => 1,
             "price" => $prod["calc_price_bol"]
         ]];
-        echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
+        if (VERBOSE) echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
             "pricing" => ["bundlePrices" => $bundle]
         ]);
@@ -217,7 +136,8 @@ foreach ($prods as $prod) {
     }
 }
 
-echo "del=$del\n";
-echo "added=$added\n";
-echo "update=$update\n";
-
+if (VERBOSE) {
+    echo "del=$del\n";
+    echo "added=$added\n";
+    echo "update=$update\n";
+}

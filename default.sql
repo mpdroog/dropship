@@ -17,6 +17,7 @@ PRAGMA foreign_keys = false;
 
 CREATE TABLE IF NOT EXISTS brands (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "slug" text not null,
   "name" TEXT NOT NULL,
   "discount" INTEGER NOT NULL
 );
@@ -26,10 +27,11 @@ CREATE TABLE IF NOT EXISTS brands (
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS prods (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "slug" TEXT NOT NULL,
   "title" TEXT NOT NULL,
   "description" TEXT NOT NULL,
   "ean" TEXT NOT NULL,
-  "stock" INTEGER NOT NULL,
+  "stock" INTEGER,
   "price" real NOT NULL,
   "price_me" real NOT NULL,
   "vat" integer not null,
@@ -80,9 +82,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS "unique_bol"
 ON "prods" (
   "bol_id" ASC
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_prodslug"
+ON "prods" (
+  "slug" ASC
+);
 
 CREATE TABLE IF NOT EXISTS cats (
   "id" INTEGER NOT NULL,
+  "slug" text not null,
   "title" TEXT NOT NULL,
   PRIMARY KEY ("id")
 );
@@ -90,6 +97,10 @@ CREATE TABLE IF NOT EXISTS cats (
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_cat"
 ON "cats" (
   "title"
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_cat_slug"
+ON "cats" (
+  "slug"
 );
 
 CREATE TABLE IF NOT EXISTS bol_del (
@@ -101,6 +112,15 @@ CREATE TABLE IF NOT EXISTS bol_del (
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_boldel"
 ON "bol_del" (
   "bol_id"
+);
+
+CREATE TABLE IF NOT EXISTS prod_img (
+  "ean" TEXT NOT NULL PRIMARY KEY,
+  "count" INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_prodimg"
+ON "prod_img" (
+  "ean"
 );
 
 PRAGMA foreign_keys = true;

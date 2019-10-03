@@ -12,10 +12,10 @@ function xml($res) {
     return json_decode(json_encode($xml), true);
 }
 
-$db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
-$modified = date("Y-m-d H:i:s", filemtime(__DIR__ . "/edc_stock.xml"));
+$db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
+$modified = date("Y-m-d H:i:s", filemtime(CACHE . "/edc_stock.xml"));
 $xml = new XMLReader();
-if (! $xml->open(__DIR__ . "/edc_stock.xml")) {
+if (! $xml->open(CACHE . "/edc_stock.xml")) {
     user_error("ERR: Failed opening edc_stock.xml");
 }
 
@@ -44,7 +44,7 @@ while($xml->name == 'product')
 
         if (is_array($prod["ean"])) $prod["ean"] = trim(implode(" ", $prod["ean"]));
         if (strlen($prod["ean"]) === 0) {
-            echo "Product missing EAN, SKIP...\n";
+            if (VERBOSE) echo "Product missing EAN, SKIP...\n";
             $error++;
             $xml->next('product');
             unset($element);
@@ -58,11 +58,11 @@ while($xml->name == 'product')
             unset($element);
             continue;
         } else if ($stock !== $prod["qty"]) {
-            echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
-            $db->exec("UPDATE `prods` SET `stock`=?, time_updated=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $modified, $prod["variantid"], $prod["ean"]]);
+            if (VERBOSE) echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
+            $db->exec("UPDATE `prods` SET `stock`=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $prod["variantid"], $prod["ean"]]);
             $update++;
 	} else {
-            echo sprintf("Nochange %s\n", $prod["ean"]);
+            if (VERBOSE) echo sprintf("Nochange %s\n", $prod["ean"]);
             $nochange++;
 	}
 	
@@ -73,12 +73,14 @@ $txn->commit();
 $db->close();
 $xml->close();
 
-print "Ignore=$ignore\n";
-print "Update=$update\n";
-print "Nochange=$nochange\n";
-print "Error=$error\n";
-print "Filter=$filtern\n";
-print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
-print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
-print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
-print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+if (VERBOSE) {
+    print "Ignore=$ignore\n";
+    print "Update=$update\n";
+    print "Nochange=$nochange\n";
+    print "Error=$error\n";
+    print "Filter=$filtern\n";
+    print "memory_get_usage() =" . memory_get_usage()/1024 . "kb\n";
+    print "memory_get_usage(true) =" . memory_get_usage(true)/1024 . "kb\n";
+    print "memory_get_peak_usage() =" . memory_get_peak_usage()/1024 . "kb\n";
+    print "memory_get_peak_usage(true) =" . memory_get_peak_usage(true)/1024 . "kb\n";
+}
