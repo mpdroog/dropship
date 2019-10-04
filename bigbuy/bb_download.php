@@ -32,8 +32,8 @@ foreach ([
   __DIR__ . "/cache/bb_prods.json" => "/rest/catalog/products.json",
   __DIR__ . "/cache/bb_cats.json" => "/rest/catalog/categories.json",
   __DIR__ . "/cache/bb_prodinfo.json" => "/rest/catalog/productsinformation.json",
-  __DIR__ . "/cache/bb_prodstock.json" => "/rest/catalog/productsstock.json",
-  __DIR__ . "/cache/bb_prodvariant.json" => "/rest/catalog/productsvariationsstock.json",
+  __DIR__ . "/cache/bb_prodsvariant.json" => "/rest/catalog/productsvariations.json",
+  //__DIR__ . "/cache/bb_prodvariant.json" => "/rest/catalog/productsvariationsstock.json",
 ] as $fname => $path) {
   $fd = fopen($fname, "w");
   $res = bb_dl($path, $fd, ["isoCode" => "nl"]);

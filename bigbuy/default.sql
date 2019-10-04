@@ -1,3 +1,16 @@
+CREATE TABLE IF NOT EXISTS prod_variants (
+  "id" INTEGER NOT NULL PRIMARY KEY,
+  "product_id" INTEGER NOT NULL,
+  "ean" TEXT NOT NULL,
+  "sku" text not null,
+  "wholesalePrice" real not null,
+  "retailPrice" real not null
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_sku_variant"
+ON "prod_variants" (
+  "sku"
+);
+
 CREATE TABLE IF NOT EXISTS prods (
   "id" INTEGER NOT NULL PRIMARY KEY,
   "name" TEXT,
