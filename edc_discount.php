@@ -7,7 +7,7 @@ require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/strings.php";
 
-$url = "http://192.168.178.36:8022/v1/script.cmd";
+$url = "https://renderapi.vigilo.io/v1/script.cmd";
 //if (VERBOSE) $url .= "?audit=1";
 
 $ch = curl_init();
@@ -19,7 +19,7 @@ $ok &= curl_setopt($ch, CURLOPT_URL, $url);
 $ok &= curl_setopt($ch, CURLOPT_POST, 1);
 $ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_discount.cmd"));
 $ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$ok &= curl_setopt($ch, CURLOPT_USERPWD, "rootdevnl" . ":" . "77UJ/xbap/lfwkhWqoCn3QW/lcBq46oXinL9UreLchU");
+$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "example");
 if ($ok !== 1) {
     user_error("curl_setopt fail");
 }
