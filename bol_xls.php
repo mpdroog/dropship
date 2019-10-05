@@ -37,13 +37,23 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
   "calc_price_site" real not null
 */
 
-$lines = $db->getAll("select ean, stock_, calc_price_bol, title, description from prods where bol_error is not null");
-$header = array_keys($lines[0]);
+$lines = $db->getAll("select ean, stock, calc_price_bol, title as product, description from prods where bol_error is not null and stock > 5");
+$header = [
+    "ean" => 'integer',
+    "stock" => 'integer',
+    "calc_price_bol" => 'price',
+    "product" => 'string',
+    "description" => 'string'
+];
 
 $xml = new XLSXWriter();
 $xml->writeSheetHeader('Sheet1', $header );
 foreach($lines as $row) {
-  $writer->writeSheetRow('Sheet1', $row );
+  if (VERBOSE) echo $row["ean"] . " - " . $row["stock"] . "\n";
+  $xml->writeSheetRow('Sheet1', $row );
 }
-$writer->writeToFile('bol.xlsx');
 
+$base = "/var/www/dropship.rootdev.nl/pub";
+$xml->writeToFile($base . '/bol.xlsx');
+echo sprintf("Written %d sync entries to %s%s\n", count($lines), $base, "/bol.xlsx");
+echo "https://dropship.rootdev.nl/bol.xlsx\n";
