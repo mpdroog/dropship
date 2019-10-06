@@ -5,6 +5,7 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/bol.php";
+require __DIR__ . "/core/strings.php";
 
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
@@ -26,6 +27,7 @@ foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) 
         }
     }
     $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
+    //$db->exec("DELETE from prods where ean = ?", [$prod["ean"]]);
     if (VERBOSE) echo sprintf("bol_del %s\n", $prod["bol_id"]);
     $del++;
     ratelimit($head);
@@ -40,7 +42,7 @@ foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, st
     if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s\n", $prod["ean"], $prod["stock"]);
 
     list($res, $head) = bol_http("POST", "/offers", [
-        "ean" => $prod["ean"],
+        "ean" => core\Strings::fill($prod["ean"], 13, "0"),
         "condition" => [
             "name" => "NEW"
         ],
