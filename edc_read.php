@@ -191,14 +191,15 @@ while($xml->name == 'product')
         $title = $prod["title"] . " " . $variant["title"];
 
 	if ($last_update === false) {
-            if (VERBOSE) echo sprintf("Add %s %s\n", $variant["ean"], $title);
+            //if (VERBOSE)
+            echo sprintf("Add %s %s\n", $variant["ean"], $title);
 	    $db->insert("prods", [
 		"id" => $variant["id"],
 		"prod_id" => $prod["id"],
                 "slug" => Strings::slugify($variant["id"] . " " . $title),
 		"title" => $title,
 		"description" => $prod["description"],
-		"ean" => $variant["ean"],
+		"ean" => core\Strings::fill($variant["ean"], 13, "0"),
 		"stock" => $variant["stockestimate"],
 		"price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],
@@ -214,11 +215,12 @@ while($xml->name == 'product')
             ]);
 	    $add++;
         } else if ($last_update < $prod["modifydate"] || $last_price !== $bol_price) {
-            if (VERBOSE) echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
+            //if (VERBOSE)
+            echo sprintf("Update %s %s\n", $variant["ean"], $prod["title"] . " " . $variant["title"]);
             $db->update("prods", [
                 //"title" => $prod["title"] . " " . $variant["title"],
                 "description" => $prod["description"],
-                "ean" => $variant["ean"],
+                "ean" => core\Strings::fill($variant["ean"], 13, "0"),
                 //"stock" => $variant["stockestimate"],
                 "price" => $prod["price"]["b2c"],
                 "price_me" => $prod["price"]["b2b"],

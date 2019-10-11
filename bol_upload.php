@@ -42,7 +42,7 @@ foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, st
     if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s\n", $prod["ean"], $prod["stock"]);
 
     list($res, $head) = bol_http("POST", "/offers", [
-        "ean" => core\Strings::fill($prod["ean"], 13, "0"),
+        "ean" => $prod["ean"],
         "condition" => [
             "name" => "NEW"
         ],
