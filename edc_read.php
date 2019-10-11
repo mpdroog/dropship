@@ -162,19 +162,25 @@ while($xml->name == 'product')
                 }
             }
 
+        if (strtolower($prod["brand"]["title"]) === "pixey") {
+            $site_price = $prod["price"]["b2c"];
+            $bol_price = $prod["price"]["b2c"];
+        } else {
             $vat_factor = bcadd("1", bcdiv($prod["price"]["vatnl"], "100", 5), 5);
             // TODO: Crash here if VAT in other country is higher than NL? As we might loose money here
             $price = bcmul($price, $vat_factor, 5); // add VAT (i.e. condoms are 9%)
             $price = bcadd($price, "6.5", 5);  // Add transaction costs
 
-            $price = bcmul($price, "1.10", 5);  // Add 10% profit for me
-            $site_price = round($price, 2);
+            $site_price = bcmul($price, "1.30", 5);  // Add 30% profit for me on site
+            $site_price = round($site_price, 2);
 
+            $price = bcmul($price, "1.10", 5);  // Add 10% profit for me
             $price = bcmul($price, "1.15", 5); // bol 15% costs
             $price = bcadd($price, "1", 5);    // bol standard costs
             // $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
             $bol_price = round($price, 2);
             $bol_price = number_format($bol_price, 2, ".", "");
+        }
 
         $cur = $db->getRow("SELECT time_updated, calc_price_bol from prods WHERE id=?", [$variant["id"]]);
         $last_price = $cur["calc_price_bol"] ?? null;

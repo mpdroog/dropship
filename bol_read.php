@@ -20,8 +20,8 @@ foreach ($db->getAll("select ean, bol_id, bol_updated, stock from prods") as $pr
 }
 
 $dels = [];
-foreach ($db->getAll("select bol_id from bol_del") as $prod) {
-    $dels[ $prod["bol_id"] ] = true;
+foreach ($db->getAll("select bol_id, tm_synced from bol_del") as $prod) {
+    $dels[ $prod["bol_id"] ] = ["tm_synced" => $prod["tm_synced"]];
 }
 
 // TODO: Abusing memory here..
@@ -67,6 +67,10 @@ foreach ($lines as $line) {
         $nomatch++;
         echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
         if (isset($dels[$offerid])) {
+            if ($dels[$offerid]["tm_synced"] !== null) {
+                echo " already sent delete-signal.\n";
+                continue;
+            }
             echo sprintf(" offerid(%s) already stored (bol_upload not working?).\n", $offerid);
             continue; // already set to del in future
         }
