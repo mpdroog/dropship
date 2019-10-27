@@ -25,6 +25,20 @@ foreach ($lines as $line) {
     //var_dump($res->errorInfo());
 }
 
+// Special products (having only 1EUR profit)
+$lowprofit = [];
+$lines = explode("\n", file_get_contents(CACHE .  "/lower.txt"));
+foreach ($lines as $line) {
+    if (strlen($line) === 0) continue;
+    $lowprofit[ Strings::fill($line, 13, "0") ] = "miss";
+}
+$highprofit = [];
+$lines = explode("\n", file_get_contents(CACHE .  "/higher.txt"));
+foreach ($lines as $line) {
+    if (strlen($line) === 0) continue;
+    $highprofit[ Strings::fill($line, 13, "0") ] = true;
+}
+
 // Prod discounts
 $brands = [];
 foreach ($db->getAll("select id, discount from brands") as $brand) {
@@ -174,12 +188,36 @@ while($xml->name == 'product')
             $site_price = bcmul($price, "1.30", 5);  // Add 30% profit for me on site
             $site_price = round($site_price, 2);
 
-            $price = bcmul($price, "1.10", 5);  // Add 10% profit for me
-            $price = bcmul($price, "1.15", 5); // bol 15% costs
-            $price = bcadd($price, "1", 5);    // bol standard costs
-            // $price = bcadd($price, "0.5", 5);    // Add 0,5eur for ourselves
-            $bol_price = round($price, 2);
-            $bol_price = number_format($bol_price, 2, ".", "");
+            $ean = Strings::fill($variant["ean"], 13, "0");
+            if (isset($lowprofit[$ean])) {
+                // Lowered prices for products so we can compete
+                $price = bcmul($price, "1.15", 5); // bol 15% costs
+                $price = bcadd($price, "1", 5);    // bol standard costs
+                $bol_price = round($price, 2);
+                $bol_price = number_format($bol_price, 2, ".", "");
+            } else if (isset($highprofit[$ean])) {
+                $price = bcmul($price, "1.20", 5);  // Add 20% profit for me
+                $price = bcmul($price, "1.15", 5); // bol 15% costs
+                $price = bcadd($price, "1", 5);    // bol standard costs
+                $bol_price = round($price, 2);
+                $bol_price = number_format($bol_price, 2, ".", "");
+            } else {
+                $price1 = bcadd($price, "10", 5); // Add 10eur
+                $price1 = bcmul($price1, "1.15", 5); // bol 15% costs
+                $price1 = bcadd($price1, "1", 5);    // bol standard costs
+
+                $price = bcmul($price, "1.10", 5);  // Add 10% profit for me
+                $price = bcmul($price, "1.15", 5); // bol 15% costs
+                $price = bcadd($price, "1", 5);    // bol standard costs
+
+                if ($price1 < $price) {
+                    // Max profit to 10eur
+                    $price = $price1;
+                }
+
+                $bol_price = round($price, 2);
+                $bol_price = number_format($bol_price, 2, ".", "");
+            }
         }
 
         $cur = $db->getRow("SELECT time_updated, calc_price_bol from prods WHERE id=?", [$variant["id"]]);
