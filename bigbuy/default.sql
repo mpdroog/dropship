@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS prod_variants (
   "ean" TEXT NOT NULL,
   "sku" text not null,
   "wholesalePrice" real not null,
-  "retailPrice" real not null
+  "retailPrice" real not null,
+
+  "stock" integer,
+  "stock_days" integer
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "unique_sku_variant"
 ON "prod_variants" (
@@ -30,6 +33,12 @@ CREATE TABLE IF NOT EXISTS prods (
   "inShopsPrice" REAL NOT NULL,
   "stock" integer,
   "stock_days" integer,
+  "description" TEXT,
+
+  "weight" real,
+  "height" real,
+  "width" real,
+  "depth" real,
 
   "bol_id" text,
   "bol_updated" text,

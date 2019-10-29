@@ -25,7 +25,7 @@ foreach ($lines as $line) {
 // Perf++
 {
     $db->exec("PRAGMA synchronous = OFF;");
-    $db->exec("PRAGMA journal_mode = MEMORY");
+    //$db->exec("PRAGMA journal_mode = MEMORY");
 }
 $txn = $db->txn();
 
@@ -68,7 +68,12 @@ foreach ($lines as $line) {
 		"taxRate" => $line["taxRate"],
 		"dateUpdProperties" => strtotime($line["dateUpdProperties"]),
 		"dateUpdCategories" => strtotime($line["dateUpdCategories"]),
-		"inShopsPrice" => $line["taxRate"]
+		"inShopsPrice" => $line["taxRate"],
+
+                "weight" => $line["weight"],
+                "height" => $line["height"],
+                "width" => $line["width"],
+                "depth" => $line["depth"]
 	];
 
 	if (! isset($lookup_prods[ $line["id"] ])) {
@@ -82,15 +87,16 @@ foreach ($lines as $line) {
 
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_prodinfo.json");
 foreach ($lines as $line) {
-	//{"id":1,"name":"Spin Hoofd Masseur","description":"<p>Leef je in stress? Verminder je stress nu met d","url":"spin-hoofd-masseur","isoCode":"nl","dateUpdDescription":"2016-07-08 07:26:46","sku":"F1515101"},
-	if (VERBOSE) echo sprintf("Extend prodinfo=%s\n", $line["id"]);
+	if (VERBOSE) echo sprintf("Extend prodinfo=%s\n", $line["name"]);
 	$db->update("prods", [
-		"name" => $line["name"]
+		"name" => $line["name"],
+                "description" => $line["description"]
 	], [
 		"id" => $line["id"]
 	], null);
 }
 
+if (VERBOSE) echo sprintf("Extend prodstock\n");
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_prodstock.json");
 foreach ($lines as $line) {
 	//[{"id":1,"stocks":[{"quantity":0,"minHandlingDays":1,"maxHandlingDays":2}],"sku":"F1515101"}
@@ -98,47 +104,85 @@ foreach ($lines as $line) {
 	$stockn = 0;
 	$days = 0;
 	foreach ($line["stocks"] as $stock) {
-		if ($stock["quantity"] > $stockn) {
-			$stockn = $stock["quantity"];
+                $stockn = bcadd($stockn, $stock["quantity"]);
+		if ($stock["maxHandlingDays"] > $days) {
 			$days = $stock["maxHandlingDays"];
 		}
 	}
 
 	if ($stockn > 2) {
-		$stockn = 2; // TODO: All hardcoded to 2 to limit much manual labour
+		$stockn = 2; // TODO: All hardcoded to 2 so we don't get into trouble
 	}
 
 	$db->update("prods", [
 		"stock" => $stockn,
 		"stock_days" => $days
 	], [
-		"sku" => $line["sku"]
+		"id" => $line["id"]
 	], null);
 }
 
+if (VERBOSE) echo sprintf("Add variants\n");
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_prodsvariant.json");
 foreach ($lines as $line) {
-	if (strlen(trim($line["ean13"])) === 0 || $line["ean13"] === "0") {
-		if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=no ean13\n", $line["id"], $line["sku"]);
-		continue;
-	}
+        if (strlen(trim($line["ean13"])) === 0 || $line["ean13"] === "0") {
+                if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=no ean13\n", $line["id"], $line["sku"]);
+                continue;
+        }
+/*
+[{"id":1050001,"product":113629,"sku":"S13013256","ean13":"5901688206140","extraWeight":0.066,"wholesalePrice":6.03,"retailPrice":7.54,"width":13,"height":2,"depth":19,"inShopsPrice":13.71}
+*/
 
-	$f = [
-		"id" => $line["id"],
-		"product_id" => $line["product"],
-		"ean" => $line["ean13"],
-		"sku" => $line["sku"],
-		"wholesalePrice" => $line["wholesalePrice"],
-		"retailPrice" => $line["retailPrice"]
-	];
+        $bol_price = bcmul($line["wholesalePrice"], "1.21", 3); // 21VAT
+        $bol_price = bcadd($bol_price, "45.62", 3); // 45eur sending cost
+        $bol_price = bcmul($bol_price, "1.15", 3);  // 15% BOL
+        $bol_price = bcadd($bol_price, "1", 3); // 1eur bol
+        //
+        $bol_price = round($bol_price, 2);
+        $bol_price = number_format($bol_price, 2, ".", "");
 
-	if (! isset($lookup_prods[ $line["id"] ])) {
-		if (VERBOSE) echo sprintf("Add id=%d sku=%s\n", $line["id"], $line["sku"]);
-		$db->insert("prod_variants", $f);
-	} else {
-		if (VERBOSE) echo sprintf("Update id=%d sku=%s\n", $line["id"], $line["sku"]);
-		$db->update("prod_variants", $f, ["id" => $line["id"]]);
-	}
+        $f = [
+                "id" => $line["id"],
+                "product_id" => $line["product"],
+                "ean" => $line["ean13"],
+                "sku" => $line["sku"],
+                "wholesalePrice" => $line["wholesalePrice"],
+                "retailPrice" => $line["retailPrice"]
+        ];
+
+        if (! isset($lookup_prods[ $line["id"] ])) {
+                if (VERBOSE) echo sprintf("Add id=%d sku=%s\n", $line["id"], $line["sku"]);
+                $db->insert("prod_variants", $f);
+        } else {
+                if (VERBOSE) echo sprintf("Update id=%d sku=%s\n", $line["id"], $line["sku"]);
+                $db->update("prod_variants", $f, ["id" => $line["id"]]);
+        }
+}
+
+if (VERBOSE) echo sprintf("Extend variantstock\n");
+// [{"id":2642,"stocks":[{"quantity":1,"minHandlingDays":1,"maxHandlingDays":2}],"sku":"H1500108"}
+$lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_variantstock.json");
+foreach ($lines as $line) {
+       if (VERBOSE) echo sprintf("Extend variantstock=%s\n", $line["sku"]);
+        $stockn = 0;
+        $days = 0;
+        foreach ($line["stocks"] as $stock) {
+                $stockn = bcadd($stockn, $stock["quantity"]);
+                if ($days < $stock["maxHandlingDays"]) {
+                        $days = $stock["maxHandlingDays"];
+                }
+        }
+
+        if ($stockn > 2) {
+                $stockn = 2; // TODO: All hardcoded to 2 to limit much manual labour
+        }
+
+        $db->update("prod_variants", [
+                "stock" => $stockn,
+                "stock_days" => $days
+        ], [
+                "sku" => $line["sku"]
+        ], null);
 }
 
 $txn->commit();

@@ -29,6 +29,9 @@ function bb_dl($url, $fd, array $args) {
 }
 
 foreach ([
+  __DIR__ . "/cache/bb_variantstock.json" => "/rest/catalog/productsvariationsstock.json",
+  __DIR__ . "/cache/bb_carriers.json" => "/rest/shipping/carriers.json",
+  __DIR__ . "/cache/bb_prodstock.json" => "/rest/catalog/productsstock.json",
   __DIR__ . "/cache/bb_prods.json" => "/rest/catalog/products.json",
   __DIR__ . "/cache/bb_cats.json" => "/rest/catalog/categories.json",
   __DIR__ . "/cache/bb_prodinfo.json" => "/rest/catalog/productsinformation.json",
