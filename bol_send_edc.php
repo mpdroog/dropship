@@ -47,7 +47,9 @@ foreach ($res["orders"] as $order) {
         if (strlen($artnr) === 0) {
             user_error("failed resolving artnr for ean " . $prod["ean"]);
         }
-        $xprods[] = "<artnr>$artnr</artnr>";
+        for ($i = 0; $i < $prod["quantity"]; $i++) {
+            $xprods[] = "<artnr>$artnr</artnr>";
+        }
     }
     $xprods = implode("\n", $xprods);
 
