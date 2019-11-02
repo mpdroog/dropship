@@ -2,7 +2,7 @@ Fully-automated EDC > Bol sync
 ===============
 
 ```bash
-apt-get install php7.0-curl php7.0-xml php7.0-sqlite
+apt-get install php7.2-curl php7.2-xml php7.2-sqlite php7.2-zip
 sqlite3 db.sqlite < db_prod.sql
 ```
 
