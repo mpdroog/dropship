@@ -28,6 +28,12 @@ function bb_dl($url, $fd, array $args) {
     return $res;
 }
 
+if (! file_exists(__DIR__ . "/cache")) {
+    if (! mkdir(__DIR__ . "/cache")) {
+        user_error("mkdir cache fail");
+    }
+}
+
 foreach ([
   __DIR__ . "/cache/bb_variantstock.json" => "/rest/catalog/productsvariationsstock.json",
   __DIR__ . "/cache/bb_carriers.json" => "/rest/shipping/carriers.json",
