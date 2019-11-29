@@ -71,3 +71,30 @@ CREATE TABLE IF NOT EXISTS cats (
 ON "cats" (
   "name"
 );*/
+
+CREATE TABLE "shipping" (
+  "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "weight_modulo" real NOT NULL,
+  "weight_max" real NOT NULL,
+  "delay" TEXT NOT NULL,
+  "cost" real NOT NULL,
+  "shipping_service_id" INTEGER NOT NULL,
+  "shipping_name" TEXT NOT NULL,
+  "shipping_method" TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_shipping"
+ON "shipping" (
+  "shipping_service_id" asc,
+  "weight_modulo" asc
+);
+
+CREATE TABLE "shipestimate" (
+  "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "weight_modulo" real NOT NULL,
+  "delay" TEXT NOT NULL,
+  "cost" real NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "unique_ship_est"
+ON "shipestimate" (
+  "weight_modulo" asc
+);
