@@ -176,7 +176,11 @@ while($xml->name == 'product')
                 }
             }
 
-        if (strtolower($prod["brand"]["title"]) === "pixey") {
+	$brand = strtolower($prod["brand"]["title"]);
+	$is_full = in_array($brand, ["pixey", /*"fleshlight toys",*/ "fleshlight girls"]);
+	if ($is_full) {
+            // Force B2C price for suppliers that else force the price up
+            if (VERBOSE) echo " use b2c";
             $site_price = $prod["price"]["b2c"];
             $bol_price = $prod["price"]["b2c"];
         } else {
@@ -195,12 +199,14 @@ while($xml->name == 'product')
                 $price = bcadd($price, "1", 5);    // bol standard costs
                 $bol_price = round($price, 2);
                 $bol_price = number_format($bol_price, 2, ".", "");
+		die("Disabled");
             } else if (isset($highprofit[$ean])) {
                 $price = bcmul($price, "1.20", 5);  // Add 20% profit for me
                 $price = bcmul($price, "1.15", 5); // bol 15% costs
                 $price = bcadd($price, "1", 5);    // bol standard costs
                 $bol_price = round($price, 2);
                 $bol_price = number_format($bol_price, 2, ".", "");
+                die("Disabled");
             } else {
                 $price1 = bcadd($price, "10", 5); // Add 10eur
                 $price1 = bcmul($price1, "1.15", 5); // bol 15% costs
@@ -213,7 +219,10 @@ while($xml->name == 'product')
                 if ($price1 < $price) {
                     // Max profit to 10eur
                     $price = $price1;
-                }
+		    if (VERBOSE) echo " set +10eur price";
+		} else {
+                    if (VERBOSE) echo " set +10% price";
+		}
 
                 $bol_price = round($price, 2);
                 $bol_price = number_format($bol_price, 2, ".", "");
