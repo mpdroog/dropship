@@ -29,9 +29,14 @@ foreach ($lines as $line) {
 }
 $txn = $db->txn();
 
+$catsMap = $db->getAllMap("id", "select id, name from cats");
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_cats.json");
 foreach ($lines as $line) {
-	if (VERBOSE) echo sprintf("Add %s\n", $line["name"]);
+	if (isset($catsMap[$line["id"]])) {
+		if(VERBOSE) echo sprintf("Skip, %s already added\n", $line["name"]);
+		continue;
+	}
+        if (VERBOSE) echo sprintf("Add %s\n", $line["name"]);
 	$db->insert("cats", [
 		"id" => $line["id"],
 		"name" => $line["name"],
@@ -123,6 +128,7 @@ foreach ($lines as $line) {
 }
 
 if (VERBOSE) echo sprintf("Add variants\n");
+$lookup_prods = $db->getAllMap("id", "select id from prod_variants");
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_prodsvariant.json");
 foreach ($lines as $line) {
         if (strlen(trim($line["ean13"])) === 0 || $line["ean13"] === "0") {
@@ -132,15 +138,6 @@ foreach ($lines as $line) {
 /*
 [{"id":1050001,"product":113629,"sku":"S13013256","ean13":"5901688206140","extraWeight":0.066,"wholesalePrice":6.03,"retailPrice":7.54,"width":13,"height":2,"depth":19,"inShopsPrice":13.71}
 */
-
-        $bol_price = bcmul($line["wholesalePrice"], "1.21", 3); // 21VAT
-        $bol_price = bcadd($bol_price, "45.62", 3); // 45eur sending cost
-        $bol_price = bcmul($bol_price, "1.15", 3);  // 15% BOL
-        $bol_price = bcadd($bol_price, "1", 3); // 1eur bol
-        //
-        $bol_price = round($bol_price, 2);
-        $bol_price = number_format($bol_price, 2, ".", "");
-
         $f = [
                 "id" => $line["id"],
                 "product_id" => $line["product"],
@@ -152,7 +149,8 @@ foreach ($lines as $line) {
 
         if (! isset($lookup_prods[ $line["id"] ])) {
                 if (VERBOSE) echo sprintf("Add id=%d sku=%s\n", $line["id"], $line["sku"]);
-                $db->insert("prod_variants", $f);
+		$id = $db->insert("prod_variants", $f);
+		$lookup_prods[ $id ] = ["id" => $id];
         } else {
                 if (VERBOSE) echo sprintf("Update id=%d sku=%s\n", $line["id"], $line["sku"]);
                 $db->update("prod_variants", $f, ["id" => $line["id"]]);
@@ -173,7 +171,7 @@ foreach ($lines as $line) {
                 }
         }
 
-        if ($stockn > 2) {
+        if ($stockn > 10) {
                 $stockn = 2; // TODO: All hardcoded to 2 to limit much manual labour
         }
 
