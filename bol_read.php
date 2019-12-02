@@ -33,12 +33,14 @@ $pos_ean = null;
 $pos_updated = null;
 $pos_stock = null;
 $pos_price = null;
+$pos_ref = null;
 foreach (explode(",", $head) as $i => $name) {
   if ($name === "offerId") $pos_offer = $i;
   if ($name === "ean") $pos_ean = $i;
   if ($name === "mutationDateTime") $pos_updated = $i;
   if ($name === "stockAmount") $pos_stock = $i;
   if ($name === "bundlePricesPrice") $pos_price = $i;
+  if ($name === "referenceCode") $pos_ref = $i;
 }
 // var_dump($pos_offer, $pos_ean, $pos_updated, $pos_stock, $pos_price);
 if ($pos_offer === null || $pos_ean === null || $pos_updated === null || $pos_stock === null || $pos_price === null) {
@@ -62,8 +64,11 @@ foreach ($lines as $line) {
     $updated = $tok[$pos_updated];
     $stock = $tok[$pos_stock];
     $price = $tok[$pos_price];
+    $ref = $tok[$pos_ref];
 
     if (! isset($lookup[ $ean ])) {
+        // Ignore BigBuy prefixed prods
+        if (Strings::has_prefix($ref, "BB-")) continue;
         $nomatch++;
         echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
         if (isset($dels[$offerid])) {
