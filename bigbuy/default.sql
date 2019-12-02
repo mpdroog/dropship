@@ -72,7 +72,7 @@ ON "cats" (
   "name"
 );*/
 
-CREATE TABLE "shipping" (
+CREATE TABLE IF NOT EXISTS "shipping" (
   "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
   "weight_modulo" real NOT NULL,
   "weight_max" real NOT NULL,
@@ -88,7 +88,7 @@ ON "shipping" (
   "weight_modulo" asc
 );
 
-CREATE TABLE "shipestimate" (
+CREATE TABLE IF NOT EXISTS "shipestimate" (
   "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
   "weight_modulo" real NOT NULL,
   "delay" TEXT NOT NULL,
