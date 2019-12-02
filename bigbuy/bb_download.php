@@ -48,7 +48,7 @@ foreach ([
   $res = bb_dl($path, $fd, ["isoCode" => "nl"]);
   fclose($fd);
   if ($res === true) {
-    echo sprintf("Feed written to %s\n", $fname);
+    if(VERBOSE) echo sprintf("Feed written to %s\n", $fname);
   }
 }
 
