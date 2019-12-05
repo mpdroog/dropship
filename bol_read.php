@@ -3,6 +3,7 @@ require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/filter.php";
+require __DIR__ . "/core/strings.php";
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 
 // Convert current sqlite-db to hashmap for rapid lookups
@@ -68,7 +69,7 @@ foreach ($lines as $line) {
 
     if (! isset($lookup[ $ean ])) {
         // Ignore BigBuy prefixed prods
-        if (Strings::has_prefix($ref, "BB-")) continue;
+        if (core\Strings::has_prefix($ref, "BB-")) continue;
         $nomatch++;
         echo sprintf("WARN: EAN(%s) not found in local sqlite", $ean);
         if (isset($dels[$offerid])) {
