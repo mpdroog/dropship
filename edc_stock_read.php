@@ -6,6 +6,8 @@
 require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
+require __DIR__ . "/core/strings.php";
+use core\Strings;
 
 function xml($res) {
     $xml = new SimpleXMLElement($res);
@@ -51,18 +53,23 @@ while($xml->name == 'product')
             continue;
         }
 
-	$stock = $db->getCell("SELECT stock from prods WHERE id=? and ean=?", [$prod["variantid"], $prod["ean"]]);
-	if ($stock === false) {
+	$ean = Strings::fill($prod["ean"], 13, "0");
+	$dbprod = $db->getRow("SELECT stock, title from prods WHERE id=? and ean=?", [$prod["variantid"], $ean]);
+
+	if (! is_array($dbprod)) {
             $filtern++;
             $xml->next('product');
             unset($element);
             continue;
-        } else if ($stock !== $prod["qty"]) {
-            if (VERBOSE) echo sprintf("Update(%s) %s => %s\n", $prod["ean"], $stock, $prod["qty"]);
-            $db->exec("UPDATE `prods` SET `stock`=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $prod["variantid"], $prod["ean"]]);
+	}
+
+	$stock = $dbprod["stock"];
+	if ($stock !== $prod["qty"]) {
+            if (VERBOSE) echo sprintf("Update(%s) %s => %s\n", $ean, $stock, $prod["qty"]);
+            $db->exec("UPDATE `prods` SET `stock`=?, bol_pending=null WHERE `id` = ? AND `ean` = ?", [$prod["qty"], $prod["variantid"], $ean]);
             $update++;
 	} else {
-            if (VERBOSE) echo sprintf("Nochange %s\n", $prod["ean"]);
+            if (VERBOSE) echo sprintf("Nochange %s\n", $ean);
             $nochange++;
 	}
 	
