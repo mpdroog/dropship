@@ -2,9 +2,7 @@
 require __DIR__ . "/../core/init.php";
 require __DIR__ . "/../core/error.php";
 require __DIR__ . "/../core/db.php";
-
-const BIGBUY_URL = "https://api.bigbuy.eu";
-const BIGBUY_KEY = "NjZlNTJjNTliODg2ODk5Y2JmZjk4OGI4M2Q1MTRhNjk1YWNhNzQxYmI1YjJlYmZmZTI0NTI4ZWNlMDY0NmU5MQ";
+require __DIR__ . "/../core/bigbuy.php";
 
 function bb_dl($url, $fd, array $args) {
     $ch = curl_init(BIGBUY_URL . $url . "?" . http_build_query($args));

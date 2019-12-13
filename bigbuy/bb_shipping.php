@@ -5,44 +5,8 @@
 require __DIR__ . "/../core/init.php";
 require __DIR__ . "/../core/db.php";
 require __DIR__ . "/../core/bol.php";
+require __DIR__ . "/../core/bigbuy.php";
 
-const BIGBUY_URL = "https://api.bigbuy.eu";
-const BIGBUY_KEY = "NjZlNTJjNTliODg2ODk5Y2JmZjk4OGI4M2Q1MTRhNjk1YWNhNzQxYmI1YjJlYmZmZTI0NTI4ZWNlMDY0NmU5MQ";
-
-function bb_json($url, array $args) {
-    $ch = curl_init(BIGBUY_URL . $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($args));
-    curl_setopt($ch, CURLOPT_ENCODING, 'UTF-8');
-    curl_setopt($ch, CURLOPT_FAILONERROR, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_AUTOREFERER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 120);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        sprintf('Authorization: Bearer %s', BIGBUY_KEY),
-        'Content-Type: application/json',
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    //curl_setopt($ch, CURLOPT_POSTFIELDS, $args);
-
-    $res = curl_exec($ch);
-    if ($res === false) {
-        var_dump($res);
-        user_error(curl_error($ch));
-    }
-    curl_close($ch);
-
-    if ($res === false) {
-        user_error('curl_exec fail');
-    }
-
-    $json = json_decode($res, true);
-    if (! is_array($json)) {
-        print_r($json);
-        user_error("bb_json fail");
-    }
-    return $json;
-}
 function parseDate($term) {
   list($num, $dur) = explode(" ", $term);
   if (! in_array($dur, ["days", "h"])) {
@@ -62,7 +26,7 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
 $shipping = $db->getAll("select shipping_service_id, weight_modulo from shipping");
 
 $min = "0";
-$max = "10";
+$max = "13";
 $step = "0.5";
 
 $weights = [];
@@ -79,7 +43,7 @@ $db->exec("delete from shipping");
 
 foreach ($weights as $weight) {
     echo $weight . "\n";
-    $prod = $db->getRow("select name,weight,sku from prods where weight <= ? ORDER BY weight desc", [$weight]);
+    $prod = $db->getRow("select name,weight,sku from prods where weight <= ? and stock > 5 ORDER BY weight desc", [$weight]);
     if(VERBOSE) var_dump($prod);
 
     $s = bb_json("/rest/shipping/orders.json", [
@@ -96,6 +60,7 @@ foreach ($weights as $weight) {
 ]);
 
     foreach ($s["shippingOptions"] as $opt) {
+        if ($opt["shippingService"]["transportMethod"] === "van") {
 	$key = sprintf("%s-%s", $opt["shippingService"]["id"], $weight);
 	if (isset($already[$key])) {
             if ($already[$key]["cost"] !== strval($opt["cost"])) {
@@ -104,6 +69,7 @@ foreach ($weights as $weight) {
 	    // Already have price
 	    continue;
 	}
+        }
         $db->insert("shipping", [
             "shipping_service_id" => $opt["shippingService"]["id"],
 	    "shipping_name" => $opt["shippingService"]["name"],

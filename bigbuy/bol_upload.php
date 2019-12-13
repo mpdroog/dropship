@@ -8,30 +8,33 @@ require __DIR__ . "/../core/bol.php";
 
 //define("CACHE_BB", __DIR__ . "/cache");
 $db = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "", "");
+if (! WRITE) echo "readonly-mode\n";
 
 $now = time();
 $del = 0;
-/*/ 0.Del prods in bol_del where tm_synced is null
+// 0.Del prods in bol_del where tm_synced is null
 foreach ($db->getAll("select * from bol_del where tm_synced is null") as $prod) {
     if ($prod["bol_id"] === null) {
         var_dump($prod);
         user_error("bol_id is null.");
     }
-    list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
-    if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
+    if (WRITE) {
+      list($res, $head) = bol_http("DELETE", "/offers/".$prod["bol_id"], []);
+      if (! in_array($res["status"], ["PENDING", "SUCCESS"])) {
         var_dump($res);
         if (isset($res["violations"]) && $res["violations"][0]["name"] === "offer-id") {
             echo "WARN: Skip invalid offerid.\n";
         } else {
             user_error("DELETE offer err.");
         }
+      }
+      $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
     }
-    $db->exec("UPDATE `bol_del` SET `tm_synced` = ? WHERE `bol_id` = ?", [$now, $prod["bol_id"]]);
     //$db->exec("DELETE from prods where ean = ?", [$prod["ean"]]);
     if (VERBOSE) echo sprintf("bol_del %s\n", $prod["bol_id"]);
     $del++;
     ratelimit($head);
-}*/
+}
 
 function recurGroups($id) {
     global $db;
@@ -48,33 +51,52 @@ $ignore = [];
 $defs = [
     "2403", // Eten/Drinken | Keuken
     "2570", // Mode | Accessoires
-    "2491" // Sport | Vrije Tijd
+    "2491", // Sport | Vrije Tijd
+    "2988", // Gaming Laptops
+    "2993", // Gaming PC
 ];
 foreach ($defs as $def) {
     $ignore = array_merge($ignore, recurGroups($def));
 }
 $ignore = implode(",", $ignore);
 
-$sql = "select ean from prods_variants v join prods p on v.product_id = p.id where weight < 10 and category not in ($ignore)";
+//$sql = "select ean from prods_variants v join prods p on v.product_id = p.id where weight < 10 and category not in ($ignore)";
 $added = 0;
 // 1.Sync prods not in Bol
-foreach ($db->getAll("select id, ean, \"name\", calc_price_bol, stock from prods where bol_id is null and bol_pending is null and bol_error is null") as $prod) {
+foreach ($db->getAll("select id, ean, \"name\", MAX(calc_price_bol) as calc_price_bol, SUM(stock) as stock from prods where bol_id is null and bol_pending is null and bol_error is null and category not in ($ignore) group by ean") as $prod) {
     if (in_array($prod["stock"], [null])) die("ERR: Stock amount empty!");
     if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
     $price = $prod["calc_price_bol"];
-    if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s\n", $prod["ean"], $prod["stock"]);
+    $qty = "0";
+    if ($prod["stock"] >= 10) {
+        $qty = "1";
+    }
+    if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s ", $prod["ean"], $qty);
+    if ($price === null) {
+            echo " skip (missing price)\n";
+	    continue; // skip
+    }
+    if ($qty === "0") {
+        echo " qty=0 skip\n";
+        continue;
+    }
+    if ($price > 200) {
+        echo " price>200eur skip\n";
+        continue;
+    }
 
+    if (WRITE) {
     list($res, $head) = bol_http("POST", "/offers", [
         "ean" => $prod["ean"],
         "condition" => [
             "name" => "NEW"
         ],
-        "referenceCode" => $prod["id"],
-        "onHoldByRetailer" => true,
+        "referenceCode" => "BB-" . $prod["id"],
+        "onHoldByRetailer" => false,
         "unknownProductTitle" => $prod["name"],
         "pricing" => [
             "bundlePrices" => [[
-                "quantity" => "1",
+                "quantity" => $qty,
                 "price" => $price
             ]]
         ],
@@ -84,7 +106,7 @@ foreach ($db->getAll("select id, ean, \"name\", calc_price_bol, stock from prods
         ],
         "fulfilment" => [
             "type" => "FBR",
-            "deliveryCode" => "4-8d"
+            "deliveryCode" => "MijnLeverbelofte"
         ]
     ]);
     if ($head["status"] !== 202) {
@@ -97,32 +119,29 @@ foreach ($db->getAll("select id, ean, \"name\", calc_price_bol, stock from prods
     if ($stmt->rowCount() !== 1) {
         user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
     }
-    $added++;
     ratelimit($head);
-
-var_dump($res);
-die("T");
+    }
+    echo "\n";
+    $added++;
 }
 
 // 2.Sync prods that have a different stock amount or price compared to bol
-// TODO: Horrible complex SQL-logic
-/*
-$prods = $db->getAll("select calc_price_bol, bol_id, id, ean, title, price, stock, bol_stock, bol_price from prods where bol_id is not null");
+$prods = $db->getAll("select MAX(calc_price_bol) as calc_price_bol, SUM(stock) as stock, bol_id, id, ean, 'name' as title, bol_stock, bol_price from prods where bol_id is not null");
 $update = 0;
 foreach ($prods as $prod) {
     $bol_id = $prod["bol_id"];
 
-    // make them comparable
-    if (intval($prod["stock"]) >= 1000) $prod["stock"] = 999;
-    //$prod["bol_stock"] = intval($prod["bol_stock"])-5;
-    $prod["stock"] = bcsub($prod["stock"], "5", 0);
-    if ($prod["stock"] < 0) $prod["stock"] = "0";
+    $qty = "0";
+    if ($prod["stock"] >= 10) {
+        $qty = "1";
+    }
     if ($prod["bol_stock"] < 0) $prod["bol_stock"] = "0";
 
-    if ($prod["bol_stock"] !== $prod["stock"]) {
-        if (VERBOSE) echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
-        list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
-            "amount" => $prod["stock"],
+    if ($prod["bol_stock"] !== $qty) {
+        if (VERBOSE) echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $qty);
+        if (WRITE) {
+	list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
+            "amount" => $qty,
             "managedByRetailer" => true
         ]);
         if ($head["status"] !== 202) {
@@ -135,7 +154,8 @@ foreach ($prods as $prod) {
         $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
         if ($stmt->rowCount() !== 1) {
             user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
-        }
+	}
+	}
         $update++;
     } else {
         if (VERBOSE) echo sprintf("bol.stock same %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
@@ -147,6 +167,7 @@ foreach ($prods as $prod) {
             "price" => $prod["calc_price_bol"]
         ]];
         if (VERBOSE) echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
+	if (WRITE) {
         list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
             "pricing" => ["bundlePrices" => $bundle]
         ]);
@@ -159,13 +180,15 @@ foreach ($prods as $prod) {
         $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
         if ($stmt->rowCount() !== 1) {
             user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
-        }
+	}
+	}
         $update++;
     }
-}*/
+}
 
 if (VERBOSE) {
+    if (! WRITE) echo "readonly-mode\n";
     echo "del=$del\n";
     echo "added=$added\n";
-    //echo "update=$update\n";
+    echo "update=$update\n";
 }

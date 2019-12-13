@@ -50,12 +50,12 @@ foreach ($lines as $line) {
 $lookup_prods = $db->getAllMap("id", "select id from prods");
 $lines = \JsonMachine\JsonMachine::fromFile(__DIR__ . "/cache/bb_prods.json");
 foreach ($lines as $line) {
-	/*if (strlen(trim($line["ean13"])) === 0 || $line["ean13"] === "0") {
+	if (strlen(trim($line["ean13"])) === 0 || $line["ean13"] === "0") {
 		if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=no ean13\n", $line["id"], $line["sku"]);
 		continue;
-	}*/
+	}
 	if ($line["active"] !== 1) {
-		if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=active=%d\n",$line["id"], $line["sku"], $line["active"]);
+		if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=inactive=%d\n",$line["id"], $line["sku"], $line["active"]);
 		continue;		
 	}
 	$f = [
@@ -82,10 +82,10 @@ foreach ($lines as $line) {
 	];
 
 	if (! isset($lookup_prods[ $line["id"] ])) {
-		if (VERBOSE) echo sprintf("Add id=%d sku=%s\n", $line["id"], $line["sku"]);
+		if (VERBOSE) echo sprintf("Add id=%d ean=%s sku=%s\n", $line["id"], $line["ean13"], $line["sku"]);
 		$db->insert("prods", $f);
 	} else {
-		if (VERBOSE) echo sprintf("Update id=%d sku=%s\n", $line["id"], $line["sku"]);
+		if (VERBOSE) echo sprintf("Update id=%d ean=%s sku=%s\n", $line["id"], $line["ean13"], $line["sku"]);
 		$db->update("prods", $f, ["id" => $line["id"]]);
 	}
 }
@@ -113,10 +113,6 @@ foreach ($lines as $line) {
 		if ($stock["maxHandlingDays"] > $days) {
 			$days = $stock["maxHandlingDays"];
 		}
-	}
-
-	if ($stockn > 2) {
-		$stockn = 2; // TODO: All hardcoded to 2 so we don't get into trouble
 	}
 
 	$db->update("prods", [
@@ -169,10 +165,6 @@ foreach ($lines as $line) {
                 if ($days < $stock["maxHandlingDays"]) {
                         $days = $stock["maxHandlingDays"];
                 }
-        }
-
-        if ($stockn > 10) {
-                $stockn = 2; // TODO: All hardcoded to 2 to limit much manual labour
         }
 
         $db->update("prod_variants", [

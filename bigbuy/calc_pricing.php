@@ -18,7 +18,7 @@ foreach ($db->getAll("select ean, id, name, wholesalePrice, calc_price_bol, weig
 	if ($mod === "0.0") $mod = "0.5";
 
 	if(VERBOSE) echo sprintf("%s (wholesalePrice=%s weight=%s mod=%s) ", $line["ean"], $line["wholesalePrice"], $line["weight"], $mod);
-	if ($mod > 10.5) {
+	if ($mod > 13) {
             if (VERBOSE) echo "too heavy\n";
             continue;
 	}
@@ -32,13 +32,15 @@ foreach ($db->getAll("select ean, id, name, wholesalePrice, calc_price_bol, weig
 
         // fmt
         $bol_price = round($bol_price, 2);
-	$bol_price = number_format($bol_price, 2, ".", "");
-
+	$bol_price = strval(number_format($bol_price, 2, ".", ""));
+	if ($line["calc_price_bol"] !== null) {
+            $line["calc_price_bol"] = number_format(str_replace(",", "", $line["calc_price_bol"]), 2, ".", "");
+        }
 	if ($line["calc_price_bol"] === $bol_price) {
 	    if (VERBOSE) echo sprintf("price not changed.\n");
             continue;
 	}
-	if (VERBOSE) echo sprintf("calc_price_bol=%s\n", $bol_price);
+	if (VERBOSE) echo sprintf("prev=%s calc_price_bol=%s\n", $line["calc_price_bol"], $bol_price);
 
 	// Update?
 	$db->update("prods", [
