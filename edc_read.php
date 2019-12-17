@@ -216,7 +216,7 @@ while($xml->name == 'product')
                 $price = bcmul($price, "1.15", 5); // bol 15% costs
                 $price = bcadd($price, "1", 5);    // bol standard costs
 
-                if ($price1 < $price) {
+                if ($price1 > $price) {
                     // Max profit to 10eur
                     $price = $price1;
 		    if (VERBOSE) echo " set +10eur price";
