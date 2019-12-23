@@ -37,43 +37,35 @@ while (true) {
     if ($n > $max) break;
 }
 
+$txn = $db->txn();
 $already = $db->getAllMap("key", "select (shipping_service_id || '-' || weight_modulo) as key, cost from shipping");
 $db->exec("delete from shipestimate");
 $db->exec("delete from shipping");
 
 foreach ($weights as $weight) {
-    echo $weight . "\n";
-    $prod = $db->getRow("select name,weight,sku from prods where weight <= ? and stock > 5 ORDER BY weight desc", [$weight]);
+    if(VERBOSE) echo $weight . "\n";
+    $prod = $db->getRow("select id,name,weight,sku,ean from prods where weight <= ? and stock > 5 and bol_error is null ORDER BY weight desc", [$weight]);
     if(VERBOSE) var_dump($prod);
+    $ean = $prod["ean"];
 
     $s = bb_json("/rest/shipping/orders.json", [
-  "order" => [
-    "delivery" => [
-      "isoCountry" => "NL",
-      "postcode" => "1703bt"
-    ],
-    "products" => [[
-      "reference" => $prod["sku"],
-      "quantity" => 1
-    ]]
-  ]
-]);
+      "order" => [
+        "delivery" => [
+          "isoCountry" => "NL",
+          "postcode" => "1703bt"
+        ],
+        "products" => [[
+          "reference" => $prod["sku"],
+          "quantity" => 1
+        ]]
+      ]
+    ]);
 
     foreach ($s["shippingOptions"] as $opt) {
-        if ($opt["shippingService"]["transportMethod"] === "van") {
-	$key = sprintf("%s-%s", $opt["shippingService"]["id"], $weight);
-	if (isset($already[$key])) {
-            if ($already[$key]["cost"] !== strval($opt["cost"])) {
-                die(sprintf("ERR: shippingService price diff? expect=%s found=%s\n", $already[$key]["cost"], $opt["cost"]));
-	    }
-	    // Already have price
-	    continue;
-	}
-        }
         $db->insert("shipping", [
             "shipping_service_id" => $opt["shippingService"]["id"],
 	    "shipping_name" => $opt["shippingService"]["name"],
-            "shipping_method" => $opt["shippingService"]["transportMethod"],
+            "shipping_method" => strtolower($opt["shippingService"]["transportMethod"]),
 	    "delay" => parseDate($opt["shippingService"]["delay"]),
 	    "cost" => $opt["cost"],
 	    "weight_modulo" => $weight,
@@ -88,7 +80,10 @@ foreach ($weights as $weight) {
     // Post-process, get the 2 cheapest and use the most expensive of those
     // so we can use 1 value after this for price calculations
     $prices = $db->getAll("select delay,cost from shipping where shipping_method = 'van' and weight_modulo = ? order by cost asc limit 2", [$weight]);
-    if (count($prices) === 0) die("no van shipping method?");
+    if (count($prices) === 0) {
+        $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);    
+	die("no van shipping method for EAN=$ean");
+    }
     $cost = count($prices) === 2 ? $prices[1] : $prices[0];
 
     /*
@@ -108,4 +103,5 @@ foreach ($weights as $weight) {
     // 1 call per 3sec
     sleep(3);
 }
+$txn->commit();
 
