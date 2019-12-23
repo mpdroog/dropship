@@ -73,15 +73,15 @@ foreach ($db->getAll("select id, ean, \"name\", MAX(calc_price_bol) as calc_pric
     }
     if (VERBOSE) echo sprintf("bol_add ean=%s stock=%s ", $prod["ean"], $qty);
     if ($price === null) {
-            echo " skip (missing price)\n";
+            if (VERBOSE) echo " skip (missing price)\n";
 	    continue; // skip
     }
     if ($qty === "0") {
-        echo " qty=0 skip\n";
+        if (VERBOSE) echo " qty=0 skip\n";
         continue;
     }
     if ($price > 200) {
-        echo " price>200eur skip\n";
+        if (VERBOSE) echo " price>200eur skip\n";
         continue;
     }
 
@@ -106,7 +106,7 @@ foreach ($db->getAll("select id, ean, \"name\", MAX(calc_price_bol) as calc_pric
         ],
         "fulfilment" => [
             "type" => "FBR",
-            "deliveryCode" => "MijnLeverbelofte"
+            "deliveryCode" => "4-8d"
         ]
     ]);
     if ($head["status"] !== 202) {
@@ -121,14 +121,18 @@ foreach ($db->getAll("select id, ean, \"name\", MAX(calc_price_bol) as calc_pric
     }
     ratelimit($head);
     }
-    echo "\n";
+    if (VERBOSE) echo "\n";
     $added++;
 }
 
 // 2.Sync prods that have a different stock amount or price compared to bol
-$prods = $db->getAll("select MAX(calc_price_bol) as calc_price_bol, SUM(stock) as stock, bol_id, id, ean, 'name' as title, bol_stock, bol_price from prods where bol_id is not null");
+$prods = $db->getAll("select id, MAX(calc_price_bol) as calc_price_bol, SUM(stock) as stock, bol_id, id, ean, 'name' as title, bol_stock, bol_price from prods where bol_id is not null and bol_error is null group by ean");
 $update = 0;
 foreach ($prods as $prod) {
+    if (trim($prod["ean"]) === "") {
+        echo sprintf("missing ean for id=%s bol_id=%s\n", $prod["id"], $prod["bol_id"]);
+        continue;
+    }
     $bol_id = $prod["bol_id"];
 
     $qty = "0";
@@ -137,7 +141,7 @@ foreach ($prods as $prod) {
     }
     if ($prod["bol_stock"] < 0) $prod["bol_stock"] = "0";
 
-    if ($prod["bol_stock"] !== $qty) {
+    if (FORCE || $prod["bol_stock"] !== $qty) {
         if (VERBOSE) echo sprintf("bol.stock_update %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $qty);
         if (WRITE) {
 	list($res, $head) = bol_http("PUT", "/offers/$bol_id/stock", [
@@ -161,28 +165,31 @@ foreach ($prods as $prod) {
         if (VERBOSE) echo sprintf("bol.stock same %s %s=>%s\n", $prod["ean"], $prod["bol_stock"], $prod["stock"]);
     }
 
-    if ($prod["bol_price"] !== $prod["calc_price_bol"]) {
-        $bundle = [[
-            "quantity" => 1,
-            "price" => $prod["calc_price_bol"]
-        ]];
-        if (VERBOSE) echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
-	if (WRITE) {
-        list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
-            "pricing" => ["bundlePrices" => $bundle]
-        ]);
-        if ($head["status"] !== 202) {
-            $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
-            var_dump($res);
-            continue;
+    if ($qty !== "0") {
+        // Only update price when quantity is more than 0 (else Bol will just error)
+        if (FORCE || $prod["bol_price"] !== $prod["calc_price_bol"]) {
+            $bundle = [[
+                "quantity" => $qty,
+                "price" => $prod["calc_price_bol"]
+            ]];
+            if (VERBOSE) echo sprintf("bol.price_update %s %s=>%s\n", $prod["ean"], $prod["bol_price"], $prod["calc_price_bol"]);
+	    if (WRITE) {
+                list($res, $head) = bol_http("PUT", "/offers/$bol_id/price", [
+                    "pricing" => ["bundlePrices" => $bundle]
+                ]);
+                if ($head["status"] !== 202) {
+                    $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
+                    var_dump($res);
+                    continue;
+                }
+                ratelimit($head);
+                $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
+                if ($stmt->rowCount() !== 1) {
+                    user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
+	        }
+	    }
+            $update++;
         }
-        ratelimit($head);
-        $stmt = $db->exec("update prods set bol_pending=? where id=?", [$res["id"], $prod["id"]]);
-        if ($stmt->rowCount() !== 1) {
-            user_error("ERR: Failed updating DB with ean=" . $prod["ean"]);
-	}
-	}
-        $update++;
     }
 }
 
