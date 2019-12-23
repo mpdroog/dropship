@@ -6,15 +6,15 @@ require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/bol.php";
 
 $arg_exportid = null;
-if (count($_SERVER["argv"]) === 2) {
+/*if (count($_SERVER["argv"]) === 2) {
     $arg_exportid = $_SERVER["argv"][1];
     if (! is_numeric($arg_exportid)) {
-        exit("ERR: argument should be exportid");
+        user_error("ERR: argument should be exportid");
     }
 }
 if (count($_SERVER["argv"]) > 2) {
-    exit("ERR: argument should be exportid");
-}
+    user_error("ERR: argument should be exportid");
+}*/
 
 $res = null;
 if ($arg_exportid !== null) {
