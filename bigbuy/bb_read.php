@@ -5,8 +5,10 @@
 require __DIR__ . "/../core/init.php";
 require __DIR__ . "/../core/error.php";
 require __DIR__ . "/../core/db.php";
+require __DIR__ . "/../core/strings.php";
 require __DIR__ . "/vendor/autoload.php";
 use core\Db;
+use core\Strings;
 
 $nomatch=0;
 $mismatch=0;
@@ -58,10 +60,11 @@ foreach ($lines as $line) {
 		if (VERBOSE) echo sprintf("Skip id=%d sku=%s reason=inactive=%d\n",$line["id"], $line["sku"], $line["active"]);
 		continue;		
 	}
+	$ean = Strings::fill($line["ean13"], 13, "0");
 	$f = [
 		"id" => $line["id"],
 		"manufacturer" => $line["manufacturer"],
-		"ean" => $line["ean13"],
+		"ean" => $ean,
 		"sku" => $line["sku"],
 		"dateUpd" => strtotime($line["dateUpd"]),
 		"category" => $line["category"],
@@ -82,10 +85,10 @@ foreach ($lines as $line) {
 	];
 
 	if (! isset($lookup_prods[ $line["id"] ])) {
-		if (VERBOSE) echo sprintf("Add id=%d ean=%s sku=%s\n", $line["id"], $line["ean13"], $line["sku"]);
+		if (VERBOSE) echo sprintf("Add id=%d ean=%s sku=%s\n", $line["id"], $ean13, $line["sku"]);
 		$db->insert("prods", $f);
 	} else {
-		if (VERBOSE) echo sprintf("Update id=%d ean=%s sku=%s\n", $line["id"], $line["ean13"], $line["sku"]);
+		if (VERBOSE) echo sprintf("Update id=%d ean=%s sku=%s\n", $line["id"], $ean, $line["sku"]);
 		$db->update("prods", $f, ["id" => $line["id"]]);
 	}
 }
@@ -134,10 +137,11 @@ foreach ($lines as $line) {
 /*
 [{"id":1050001,"product":113629,"sku":"S13013256","ean13":"5901688206140","extraWeight":0.066,"wholesalePrice":6.03,"retailPrice":7.54,"width":13,"height":2,"depth":19,"inShopsPrice":13.71}
 */
+	$ean = Strings::fill($line["ean13"], 13, "0");
         $f = [
                 "id" => $line["id"],
                 "product_id" => $line["product"],
-                "ean" => $line["ean13"],
+                "ean" => $ean,
                 "sku" => $line["sku"],
                 "wholesalePrice" => $line["wholesalePrice"],
                 "retailPrice" => $line["retailPrice"]
