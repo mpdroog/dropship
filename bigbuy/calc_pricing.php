@@ -22,6 +22,11 @@ foreach ($db->getAll("select ean, id, name, wholesalePrice, calc_price_bol, weig
             if (VERBOSE) echo "too heavy\n";
             continue;
 	}
+	if (! isset($shipping[$mod]["cost"])) {
+            echo sprintf("ERR: missing db shipestimate for weight=%s\n", $mod);
+            exit;
+	}
+
         $bol_price = $line["wholesalePrice"];
         $bol_price = bcadd($bol_price, $shipping[$mod]["cost"], 3); // sending cost
 	$bol_price = bcadd($bol_price, "10", 3); // 10eur me
