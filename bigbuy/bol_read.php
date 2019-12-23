@@ -100,7 +100,14 @@ foreach ($lines as $line) {
     $l = $lookup[$ean];
     $l["stock"] = $l["stock"] >= 10 ? "1" : "0";
     if ($l["bol_id"] !== null && $l["bol_id"] !== $offerid) {
-        $mismatch++;
+        // if edc ignore
+        $edcdb = new core\Db(sprintf("sqlite:%s/db.sqlite", __DIR__), "../", "");
+        $edc = $edcdb->getCell("select 1 from prods where ean = ?", [$ean]);
+        $edcdb = null;
+	if ("1" === $edc) {
+            continue;
+	}
+	$mismatch++;
         echo sprintf("WARN: EAN(%s) has different bol_id in DB compared to bol CSV.\n", $ean);
         continue;
     }
@@ -121,6 +128,7 @@ foreach ($lines as $line) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }
     $update++;
+    echo sprintf("Set bol(%s) for ean(%s)\n", $offerid, $ean);
 }
 $txn->commit();
 $db->close();
