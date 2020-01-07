@@ -19,17 +19,19 @@ $ok &= curl_setopt($ch, CURLOPT_URL, $url);
 $ok &= curl_setopt($ch, CURLOPT_POST, 1);
 $ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_discount.cmd"));
 $ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "example");
+$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "zijujekusufilefogepolemo");
 if ($ok !== 1) {
     user_error("curl_setopt fail");
 }
 
 $res = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
 if ($res === false) {
+    echo curl_error($ch) . "\n";
     user_error("curl_exec fail");
 }
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
 if ($code !== 200) {
     user_error("curl_http($code) res=$res");
 }
@@ -54,7 +56,7 @@ foreach ($lines as $idx => $line) {
         continue;
     }
     if (count(explode(";", $line)) !== $sep) {
-        var_dump($line);
+        var_dump($lines);
         user_error("Line is not same as first?");
     }
 }

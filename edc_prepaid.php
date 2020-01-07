@@ -18,18 +18,20 @@ $ok &= curl_setopt($ch, CURLOPT_URL,"https://renderapi.vigilo.io/v1/script.cmd")
 $ok &= curl_setopt($ch, CURLOPT_POST, 1);
 $ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_prepaid.cmd"));
 $ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "example");  
+$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "zijujekusufilefogepolemo");  
 
 if ($ok !== 1) {
     user_error("curl_setopt fail");
 }
 
 $res = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
 if ($res === false) {
+    echo curl_error($ch) . "\n";
     user_error("curl_exec fail");
 }
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
 if ($code !== 200) {
     user_error("curl_http($code) res=$res");
 }
