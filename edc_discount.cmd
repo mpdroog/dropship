@@ -1,4 +1,5 @@
 !! wait 1m
+!! clearcookies
 !! mail rootdev@gmail.com
 !! use resource
 !! onerror screenshot

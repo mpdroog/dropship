@@ -8,34 +8,33 @@ require __DIR__ . "/core/init.php";
 require __DIR__ . "/core/error.php";
 require __DIR__ . "/core/db.php";
 require __DIR__ . "/core/strings.php";
+require __DIR__ . "/core/defer.php";
+require __DIR__ . "/core/vigilo.php";
 
-$ch = curl_init();
-if ($ch === false) {
-    user_error('curl_init fail');
+$begin = time();
+$a = core\Defer(function() {
+    global $begin;
+    if (VERBOSE) echo sprintf("script.time=%s sec\n", (time()-$begin));
+});
+
+Vigilo::init("api", "zijujekusufilefogepolemo");
+$cmd = file_get_contents(__DIR__ . "/edc_prepaid.cmd");
+$res = Vigilo::script($cmd);
+$uuid = $res["uuid"];
+if (VERBOSE) echo sprintf("uuid=%s\n", $uuid);
+
+for ($i = 0; $i < 25; $i++) {
+    $res = Vigilo::script_poll($uuid);
+    if ($res["ok"]) break;
+
+    var_dump($res);
+    sleep(5);
 }
-$ok = 1;
-$ok &= curl_setopt($ch, CURLOPT_URL,"https://renderapi.vigilo.io/v1/script.cmd");
-$ok &= curl_setopt($ch, CURLOPT_POST, 1);
-$ok &= curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents(__DIR__ . "/edc_prepaid.cmd"));
-$ok &= curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-$ok &= curl_setopt($ch, CURLOPT_USERPWD, "api" . ":" . "zijujekusufilefogepolemo");  
-
-if ($ok !== 1) {
-    user_error("curl_setopt fail");
-}
-
-$res = curl_exec($ch);
-if ($res === false) {
-    echo curl_error($ch) . "\n";
-    user_error("curl_exec fail");
-}
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($code !== 200) {
-    user_error("curl_http($code) res=$res");
+if ($i >= 24) {
+    user_error("No response for uuid=" . $uuid);
 }
 
+$res = $res["res"];
 // ugly HTML parser here
 // prepaid left
 $s = '<strong id="header_klant_tegoed">';
