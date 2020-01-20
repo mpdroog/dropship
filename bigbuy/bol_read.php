@@ -72,7 +72,7 @@ foreach ($lines as $line) {
 
     // Only handle BB-prefixed prods
     if (! Strings::has_prefix($ref, "BB-")) {
-            echo sprintf(" offerid(%s) ignore not BB.\n", $offerid);
+            if(VERBOSE) echo sprintf(" offerid(%s) ignore not BB.\n", $offerid);
 	    continue;
     }
     if (! isset($lookup[ $ean ])) {
@@ -128,7 +128,7 @@ foreach ($lines as $line) {
         user_error("ERR: Failed updating DB with ean=$ean");
     }
     $update++;
-    echo sprintf("Set bol(%s) for ean(%s)\n", $offerid, $ean);
+    if (VERBOSE) echo sprintf("Update bol(%s) for ean(%s)\n", $offerid, $ean);
 }
 $txn->commit();
 $db->close();
