@@ -20,14 +20,14 @@ $a = core\Defer(function() {
 Vigilo::init("api", "zijujekusufilefogepolemo");
 $cmd = file_get_contents(__DIR__ . "/edc_prepaid.cmd");
 $res = Vigilo::script($cmd);
+if (VERBOSE) var_dump($res);
 $uuid = $res["uuid"];
 if (VERBOSE) echo sprintf("uuid=%s\n", $uuid);
 
 for ($i = 0; $i < 25; $i++) {
     $res = Vigilo::script_poll($uuid);
+    if (VERBOSE) var_dump($res);
     if ($res["ok"]) break;
-
-    var_dump($res);
     sleep(5);
 }
 if ($i >= 24) {
