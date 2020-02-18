@@ -66,7 +66,8 @@ foreach ($db->getAll("select id, ean, title, calc_price_bol, price_me, price, st
     ]);
     if ($head["status"] !== 202) {
         $db->exec("update prods set bol_error=? where id=?", [time(), $prod["id"]]);
-        var_dump($res);
+	var_dump($res);
+	if ($res["status"] === 401) die("FAIL");
         ratelimit($head);
         continue;
     }
