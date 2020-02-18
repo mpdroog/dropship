@@ -85,6 +85,13 @@ while($xml->name == 'product')
 {
 	$prod = xml($xml->readOuterXML());
 
+	if ($prod["id"] === "39132") {
+                if (VERBOSE) echo sprintf("Ignore (blacklisted id) %s\n", $prod["title"]);
+                $ignore++;
+                $xml->next('product');
+                unset($element);
+                continue;
+	}
 	if ($prod["restrictions"]["platform"] === 'Y') {
 		if (VERBOSE) echo sprintf("Ignore (not allowed on Bol) %s\n", $prod["title"]);
 		$ignore++;
