@@ -21,6 +21,9 @@ function bol_bearer() {
     if (! is_array($j)) {
         user_error("http_bearer: invalid res=$res");
     }
+    if (! isset($j["token_type"])) {
+        user_error("http_bearer: invalid res=$res");
+    }
     if ($j["token_type"] !== "Bearer") {
         user_error("http_bearer: unsupported token type=" . $j["token_type"]);
     }
