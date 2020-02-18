@@ -10,12 +10,12 @@ $db = new core\Db(sprintf("sqlite:%s/db.sqlite", CACHE), "", "");
 // TODO: Something more memory friendly?
 $lookup = [];
 foreach ($db->getAll("select ean, bol_id, bol_updated, stock from prods") as $prod) {
-    if (isset($lookup[ $prod["ean"] ])) {
-        user_error("assumption fail. double EAN");
-    }
     if (filter_ean($prod["ean"])) {
         if (VERBOSE) echo sprintf("filter_ean(%s)\n", $prod["ean"]);
         continue;
+    }
+    if (isset($lookup[ $prod["ean"] ])) {
+        user_error(sprintf("assumption fail. double EAN(%s)", $prod["ean"]));
     }
     $lookup[ $prod["ean"] ] = $prod;
 }
