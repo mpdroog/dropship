@@ -23,9 +23,9 @@ if (VERBOSE) echo sprintf("uuid=%s\n", $uuid);
 
 for ($i = 0; $i < 25; $i++) {
     $res = Vigilo::script_poll($uuid);
+    if (VERBOSE) var_dump($res);
     if ($res["ok"]) break;
 
-    var_dump($res);
     sleep(5);
 }
 if ($i >= 24) {
