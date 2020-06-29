@@ -1,8 +1,5 @@
 !! wait 1m
 !! clearcookies
-!! mail rootdev@gmail.com
-!! use resource
-!! onerror screenshot
 open https://www.erotischegroothandel.nl/login.html
 wait page https://www.erotischegroothandel.nl/login.html
 js document.getElementById("gebr").value = "rootdev@gmail.com";
