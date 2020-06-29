@@ -80,10 +80,6 @@ foreach ($res["orders"] as $order) {
     <products>' . $xprods . '</products>
     </orderdetails>';
     if (VERBOSE) var_dump($xml);
-    if ($ship["zipCode"] === "3600" && strtolower($ship["city"]) === "genk") {
-        echo "WARN: Kathleen David order IGNORED\n";
-        exit(1);
-    }
 
     $id = "TEST001";
     if (WRITE) {
