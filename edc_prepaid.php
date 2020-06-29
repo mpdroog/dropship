@@ -31,6 +31,7 @@ for ($i = 0; $i < 25; $i++) {
     sleep(5);
 }
 if ($i >= 24) {
+    var_dump($res);
     user_error("No response for uuid=" . $uuid);
 }
 
