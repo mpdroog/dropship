@@ -57,6 +57,7 @@ class Vigilo {
   }
 
   private static function json($url, $fields = null) {
+      if (VERBOSE) echo "vigilo::json url=$url\n";
       $ch = curl_init($url);
       if ($ch === false) {
           user_error("curl_init fail");
@@ -103,8 +104,9 @@ class Vigilo {
       return self::json($url, $cmd);
   }
 
-  public static function script_poll($jobid, $fields = null) {
-      $url = "https://renderapi.vigilo.io/v1/job?uuid=$jobid";
+  public static function script_poll($jobid, $fields = null, array $args = []) {
+      $url = "https://renderapi.vigilo.io/v1/job?" . http_build_query(array_merge(["uuid" => $jobid], $args));
+      if (VERBOSE) echo "vigilo::script_poll url=$url\n";
       $ch = curl_init($url);
       if ($ch === false) {
           user_error("curl_init fail");

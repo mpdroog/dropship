@@ -25,14 +25,14 @@ $uuid = $res["uuid"];
 if (VERBOSE) echo sprintf("uuid=%s\n", $uuid);
 
 for ($i = 0; $i < 25; $i++) {
-    $res = Vigilo::script_poll($uuid);
+    $res = Vigilo::script_poll($uuid, null, ["audit" => "1"]);
     if (VERBOSE) var_dump($res);
     if ($res["ok"]) break;
     sleep(5);
 }
 if ($i >= 24) {
     var_dump($res);
-    user_error("No response for uuid=" . $uuid);
+    user_error("Timeout response for uuid=" . $uuid);
 }
 
 $res = $res["res"];
@@ -51,7 +51,7 @@ $prepaid = floatval(str_replace(",", ".", $prepaid));
 if (VERBOSE) {
     echo sprintf("prepaid=%s\n", $prepaid);
 }
-if ($prepaid < 50) {
+if ($prepaid < 40) {
     echo sprintf("prepaid.remain=%s\n", $prepaid);
     echo sprintf("https://www.erotischegroothandel.nl/mijn_overzicht/tegoed/\n");
 }

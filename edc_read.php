@@ -153,7 +153,9 @@ while($xml->name == 'product')
                 $xml->next('product');
                 unset($element);
                 continue;
-            }
+	    }
+	    // bol fur products
+	    if (in_array($variant["ean"], ["0848518013705", "0848518012357"])) continue; // ignore
 
             // Manual calculation of our own cost price
             // http://cdn.edc.nl/manuals/manual_b2b_feeds_2016.pdf - 9.1 Manual calculation
