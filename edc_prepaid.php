@@ -36,17 +36,9 @@ if ($i >= 24) {
 }
 
 $res = $res["res"];
-// ugly HTML parser here
-// prepaid left
-$s = '<strong id="header_klant_tegoed">';
-$b = mb_strpos($res, $s);
-$e = mb_strpos($res, '</strong>', $b+strlen($s));
-if ($b === false || $e === false) {
-    var_dump($res);
-    var_dump(["b" => $b, "e" => $e]);
-    user_error("failed parsing html positions.");
-}
-$prepaid = mb_substr($res, $b+strlen($s), $e-$b);
+if (VERBOSE) file_put_contents("/tmp/edc_prepaid.html", $res);
+$prepaid = core\Strings::between($res, '<div class="main-header__account-info">', '<div class="main-header__search-wrapper">');
+$prepaid = core\Strings::between($prepaid, '&euro; ', '</div>');
 $prepaid = floatval(str_replace(",", ".", $prepaid));
 if (VERBOSE) {
     echo sprintf("prepaid=%s\n", $prepaid);
