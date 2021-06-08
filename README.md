@@ -10,11 +10,11 @@ sqlite3 db.sqlite < db_prod.sql
 ```
 MAILTO=rootdev@gmail.com
 # daily
-5 0 * * * www-data /usr/bin/php /var/www/dropship/edc_download.php && php /var/www/dropship/edc_read.php
+0 0 * * * www-data /usr/bin/php /var/www/dropship/edc_download.php && php /var/www/dropship/edc_read.php
 # hourly
-0 */1 * * * root /var/www/dropship/perm.sh
+1 */1 * * * root /var/www/dropship/perm.sh
 3 */1 * * * www-data /usr/bin/php /var/www/dropship/bol_download.php && php /var/www/dropship/bol_read.php
-1 */1 * * * www-data /usr/bin/php /var/www/dropship/edc_discount.php
+1 */6 * * * www-data /usr/bin/php /var/www/dropship/edc_discount.php
 22 */1 * * * www-data /usr/bin/php /var/www/dropship/edc_prepaid.php
 
 15 */1 * * * www-data /usr/bin/php /var/www/dropship/edc_stock_download.php && php /var/www/dropship/edc_stock_read.php
@@ -22,4 +22,10 @@ MAILTO=rootdev@gmail.com
 
 # 10min
 */10 * * * * www-data /usr/bin/php /var/www/dropship/bol_send_edc.php -w
+
+#1 */1 * * * root /var/www/dropship/bigbuy/perm.sh
+#25 */1 * * * www-data /usr/bin/php /var/www/dropship/bigbuy/bb_download.php && /usr/bin/php /var/www/dropship/bigbuy/bb_read.php && /usr/bin/php /var/www/dropship/bigbuy/bb_shipping.php
+#29 */1 * * * www-data /usr/bin/php /var/www/dropship/bigbuy/bol_read.php
+#29 */1 * * * www-data /usr/bin/php /var/www/dropship/bigbuy/calc_pricing.php
+#33 */1 * * * www-data /usr/bin/php /var/www/dropship/bigbuy/bol_upload.php -w
 ```
