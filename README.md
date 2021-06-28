@@ -2,6 +2,13 @@ Fully-automated EDC/Bigbuy to Bol sync
 ===============
 A collection of PHP-scripts that use a local SQLite database to synchronize EDC and/or BigBuy to Bol.
 
+EDC=ErotischeGroothandel https://www.one-dc.com/nl/
+
+BigBuy=https://www.bigbuy.eu/
+
+Bol=https://www.bol.com/
+
+
 ```bash
 apt-get install php7.2-curl php7.2-xml php7.2-sqlite php7.2-zip
 sqlite3 db.sqlite < db_prod.sql
