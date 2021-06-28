@@ -1,5 +1,6 @@
-Fully-automated EDC > Bol sync
+Fully-automated EDC/Bigbuy to Bol sync
 ===============
+A collection of PHP-scripts that use a local SQLite database to synchronize EDC and/or BigBuy to Bol.
 
 ```bash
 apt-get install php7.2-curl php7.2-xml php7.2-sqlite php7.2-zip
